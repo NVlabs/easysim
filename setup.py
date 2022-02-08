@@ -6,7 +6,7 @@
 # disclosure or distribution of this material and related documentation
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
-"""__Python_Project_Template__ package setuptools."""
+"""easysim package setuptools."""
 
 # NOTE (roflaherty): This file is still needed to allow the package to be
 # installed in editable mode.

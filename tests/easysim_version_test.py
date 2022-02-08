@@ -6,13 +6,13 @@
 # disclosure or distribution of this material and related documentation
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
-"""Unit tests for the `__python_project_template__` package version."""
+"""Unit tests for the `easysim` package version."""
 
 # SRL
-import __python_project_template__
+import easysim
 
 
-def test___python_project_template___version() -> None:
-    """Test `__python_project_template__` package version is set."""
-    assert __python_project_template__.__version__ is not None
-    assert __python_project_template__.__version__ != ""
+def test_easysim_version() -> None:
+    """Test `easysim` package version is set."""
+    assert easysim.__version__ is not None
+    assert easysim.__version__ != ""

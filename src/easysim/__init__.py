@@ -6,7 +6,7 @@
 # disclosure or distribution of this material and related documentation
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
-"""__Python_Project_Template__ package."""
+"""easysim package."""
 
 
 # NOTE (roflaherty): This is inspired by how matplotlib does creates its version value.
@@ -40,7 +40,7 @@ def _get_version() -> str:
             # Third Party
             from importlib_metadata import version  # type: ignore[no-redef]
 
-        this_version = version("nvidia___python_project_template__")
+        this_version = version("easysim")
 
     return this_version
 
