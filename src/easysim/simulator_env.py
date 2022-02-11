@@ -1,0 +1,78 @@
+import gym
+import abc
+
+from easysim.scene import Scene
+from easysim.simulators.registration import make
+
+
+class SimulatorEnv(gym.Env, abc.ABC):
+    """ """
+
+    def __init__(self, cfg):
+        """ """
+        self._cfg = cfg
+
+        self._scene = Scene()
+
+        self.init()
+
+        self._simulator = make(self.cfg.SIM.SIMULATOR, cfg=self.cfg.SIM)
+
+    @property
+    def cfg(self):
+        """ """
+        return self._cfg
+
+    @property
+    def scene(self):
+        """ """
+        return self._scene
+
+    @abc.abstractmethod
+    def init(self):
+        """ """
+
+    def reset(self, env_ids=None, **kwargs):
+        """ """
+        self.pre_reset(env_ids, **kwargs)
+
+        self._simulator.reset(self.scene.bodies, env_ids)
+
+        self.post_reset(env_ids, **kwargs)
+
+        return None
+
+    @abc.abstractmethod
+    def pre_reset(self, env_ids, **kwargs):
+        """ """
+
+    @abc.abstractmethod
+    def post_reset(self, env_ids, **kwargs):
+        """ """
+
+    def step(self, action):
+        """ """
+        self.pre_step(action)
+
+        self._simulator.step(self.scene.bodies)
+
+        self.post_step(action)
+
+        return None, None, None, None
+
+    @abc.abstractmethod
+    def pre_step(self, action):
+        """ """
+
+    @abc.abstractmethod
+    def post_step(self, action):
+        """ """
+
+    @property
+    def contact(self):
+        """ """
+        return self._simulator.contact
+
+    def close(self):
+        """ """
+        self._simulator.close()
