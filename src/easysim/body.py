@@ -5,6 +5,8 @@ import numpy as np
 class Body:
     """ """
 
+    _created = False
+
     def __init__(
         self,
         name=None,
@@ -63,6 +65,13 @@ class Body:
 
         self.link_state = None
         self.contact_id = None
+
+        self._created = True
+
+    def __setattr__(self, key, value):
+        if self._created and not hasattr(self, key):
+            raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
+        object.__setattr__(self, key, value)
 
     @property
     def name(self):
