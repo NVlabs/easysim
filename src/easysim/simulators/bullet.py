@@ -359,14 +359,15 @@ class Bullet(Simulator):
                 time.sleep(time_sleep)
             self._last_frame_time = time.time()
 
-        for body in bodies + self._bodies:
+        for body in reversed(self._bodies):
             if body.name not in [x.name for x in bodies]:
                 # Remove body.
                 with self._disable_cov_rendering():
                     self._p.removeBody(self._body_ids[body.name])
                     del self._body_ids[body.name]
                     self._bodies.remove(body)
-            elif body.name not in [x.name for x in self._bodies]:
+        for body in bodies:
+            if body.name not in [x.name for x in self._bodies]:
                 # Add body.
                 with self._disable_cov_rendering():
                     self._load_body(body)
