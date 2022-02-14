@@ -8,13 +8,13 @@ from easysim.simulators.registration import make
 class SimulatorEnv(gym.Env, abc.ABC):
     """ """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, **kwargs):
         """ """
         self._cfg = cfg
 
         self._scene = Scene()
 
-        self.init()
+        self.init(**kwargs)
 
         self._simulator = make(self.cfg.SIM.SIMULATOR, cfg=self.cfg.SIM)
 
@@ -29,7 +29,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
         return self._scene
 
     @abc.abstractmethod
-    def init(self):
+    def init(self, **kwargs):
         """ """
 
     def reset(self, env_ids=None, **kwargs):
@@ -38,9 +38,9 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         self._simulator.reset(self.scene.bodies, env_ids)
 
-        self.post_reset(env_ids, **kwargs)
+        observation = self.post_reset(env_ids, **kwargs)
 
-        return None
+        return observation
 
     @abc.abstractmethod
     def pre_reset(self, env_ids, **kwargs):
@@ -56,9 +56,9 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         self._simulator.step(self.scene.bodies)
 
-        self.post_step(action)
+        observation, reward, done, info = self.post_step(action)
 
-        return None, None, None, None
+        return observation, reward, done, info
 
     @abc.abstractmethod
     def pre_step(self, action):
