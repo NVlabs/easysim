@@ -788,9 +788,14 @@ class IsaacGym(Simulator):
             else:
                 self._gym.poll_viewer_events(self._viewer)
 
+        self._gym.refresh_dof_state_tensor(self._sim)
         self._gym.refresh_rigid_body_state_tensor(self._sim)
 
         for body in bodies:
+            if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
+                body.dof_state = self._dof_state.view(self._num_envs, -1, 2)[
+                    :, self._asset_dof_slice[body.name]
+                ].clone()
             body.link_state = self._rigid_body_state.view(self._num_envs, -1, 13)[
                 :, self._asset_rigid_body_slice[body.name]
             ].clone()

@@ -63,6 +63,7 @@ class Body:
         self.dof_target_velocity = dof_target_velocity
         self.dof_force = dof_force
 
+        self.dof_state = None
         self.link_state = None
         self.contact_id = None
 
@@ -431,6 +432,20 @@ class Body:
             if value.dim() not in (1, 2):
                 raise ValueError("'dof_force' must have a number of dimensions of 1 or 2")
         self._dof_force = value
+
+    @property
+    def dof_state(self):
+        """ """
+        return self._dof_state
+
+    @dof_state.setter
+    def dof_state(self, value):
+        """ """
+        if value is not None:
+            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            if value.dim() != 3:
+                raise ValueError("'dof_state' must have a number of dimensions of 3")
+        self._dof_state = value
 
     @property
     def link_state(self):

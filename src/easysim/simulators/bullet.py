@@ -642,6 +642,13 @@ class Bullet(Simulator):
         self._p.stepSimulation()
 
         for body in bodies:
+            if self._num_links[body.name] > 1:
+                joint_states = self._p.getJointStates(
+                    self._body_ids[body.name], self._dof_indices[body.name]
+                )
+                dof_state = [x[0:2] for x in joint_states]
+                body.dof_state = [dof_state]
+
             pos, orn = self._p.getBasePositionAndOrientation(self._body_ids[body.name])
             lin, ang = self._p.getBaseVelocity(self._body_ids[body.name])
             link_state = [pos + orn + lin + ang]
