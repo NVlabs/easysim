@@ -24,6 +24,7 @@ class Body:
         initial_base_position=None,
         initial_base_velocity=None,
         use_fixed_base=None,
+        use_self_collision=None,
         initial_dof_position=None,
         initial_dof_velocity=None,
         link_color=None,
@@ -50,6 +51,7 @@ class Body:
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
         self.use_fixed_base = use_fixed_base
+        self.use_self_collision = use_self_collision
         self.initial_dof_position = initial_dof_position
         self.initial_dof_velocity = initial_dof_velocity
 
@@ -177,6 +179,16 @@ class Body:
     def use_fixed_base(self, value):
         """ """
         self._use_fixed_base = value
+
+    @property
+    def use_self_collision(self):
+        """ """
+        return self._use_self_collision
+
+    @use_self_collision.setter
+    def use_self_collision(self, value):
+        """ """
+        self._use_self_collision = value
 
     @property
     def initial_dof_position(self):

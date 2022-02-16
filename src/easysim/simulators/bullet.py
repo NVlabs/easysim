@@ -104,6 +104,8 @@ class Bullet(Simulator):
         kwargs = {}
         if body.use_fixed_base is not None:
             kwargs["useFixedBase"] = body.use_fixed_base
+        if body.use_self_collision is not None and body.use_self_collision:
+            kwargs["flags"] = self._p.URDF_USE_SELF_COLLISION
         self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)
 
         dof_indices = []

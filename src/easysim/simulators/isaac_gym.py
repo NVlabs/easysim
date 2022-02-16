@@ -162,6 +162,11 @@ class IsaacGym(Simulator):
             asset_options = gymapi.AssetOptions()
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
+            if body.use_self_collision is not None:
+                raise ValueError(
+                    "For Isaac Gym, keep 'use_self_collision' to None and set self-collision with "
+                    f"'collision_filter' (0: enabled): '{body.name}'"
+                )
             if body.link_linear_damping is not None:
                 if body.link_linear_damping.ndim != 0:
                     raise ValueError(
