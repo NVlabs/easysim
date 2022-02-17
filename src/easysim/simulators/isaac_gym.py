@@ -157,6 +157,7 @@ class IsaacGym(Simulator):
         self._asset_dof_slice = {}
         self._asset_rigid_body_slice = {}
         self._asset_rigid_body_mapping = {-1: [0, 0]}
+        self._asset_rigid_shape_count = {}
 
         counter_dof = 0
         counter_rigid_body = 0
@@ -207,6 +208,10 @@ class IsaacGym(Simulator):
             for i in range(num_rigid_bodies):
                 self._asset_rigid_body_mapping[counter_rigid_body + i] = [b, i]
             counter_rigid_body += num_rigid_bodies
+
+            self._asset_rigid_shape_count[body.name] = self._gym.get_asset_rigid_shape_count(
+                self._assets[body.name]
+            )
 
             body.contact_id = b
 
@@ -399,14 +404,14 @@ class IsaacGym(Simulator):
             "link_restitution",
         ):
             if getattr(body, attr) is not None:
-                if len(self._get_body_attr_array(body, attr, 1, idx)) != self._get_slice_length(
-                    self._asset_rigid_body_slice[body.name]
+                if (
+                    len(self._get_body_attr_array(body, attr, 1, idx))
+                    != self._asset_rigid_shape_count[body.name]
                 ):
                     raise ValueError(
                         f"Size of '{attr}' in the link dimension "
                         f"({len(self._get_body_attr_array(body, attr, 1, idx))}) should match the "
-                        "number of links "
-                        f"({self._get_slice_length(self._asset_rigid_body_slice[body.name])}): "
+                        f"number of rigid shapes ({self._asset_rigid_shape_count[body.name]}): "
                         f"'{body.name}'"
                     )
         rigid_shape_props = self._gym.get_asset_rigid_shape_properties(self._assets[body.name])
