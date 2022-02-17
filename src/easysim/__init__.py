@@ -54,8 +54,15 @@ del _get_version
 
 from easysim.simulator_env import SimulatorEnv
 from easysim.body import Body
-from easysim.constants import DoFControlMode
+from easysim.constants import DoFControlMode, MeshNormalMode
 from easysim.config import cfg
 from easysim.cmd import get_config_from_args
 
-__all__ = ["SimulatorEnv", "Body", "DoFControlMode", "cfg", "get_config_from_args"]
+__all__ = [
+    "SimulatorEnv",
+    "Body",
+    "DoFControlMode",
+    "MeshNormalMode",
+    "cfg",
+    "get_config_from_args",
+]

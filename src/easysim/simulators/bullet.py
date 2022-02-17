@@ -106,6 +106,8 @@ class Bullet(Simulator):
             kwargs["useFixedBase"] = body.use_fixed_base
         if body.use_self_collision is not None and body.use_self_collision:
             kwargs["flags"] = self._p.URDF_USE_SELF_COLLISION
+        if body.mesh_normal_mode is not None:
+            raise ValueError(f"'mesh_normal_mode' is not supported in Bullet: '{body.name}'")
         self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)
 
         dof_indices = []
@@ -423,6 +425,10 @@ class Bullet(Simulator):
                         set_link_dynamics = True
             if set_link_dynamics:
                 self._set_link_dynamics(self._bodies[b])
+
+            for attr in ("dof_armature",):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
             if len(self._dof_indices[body.name]) == 0:
                 for attr in (

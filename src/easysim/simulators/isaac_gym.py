@@ -25,7 +25,7 @@ except ImportError:
     from isaacgym import gymtorch, gymutil
 
 from easysim.simulators.simulator import Simulator
-from easysim.constants import DoFControlMode
+from easysim.constants import DoFControlMode, MeshNormalMode
 from easysim.contact import create_contact_array
 
 
@@ -37,6 +37,11 @@ class IsaacGym(Simulator):
         DoFControlMode.POSITION_CONTROL: gymapi.DOF_MODE_POS,
         DoFControlMode.VELOCITY_CONTROL: gymapi.DOF_MODE_VEL,
         DoFControlMode.TORQUE_CONTROL: gymapi.DOF_MODE_EFFORT,
+    }
+    _MESH_NORMAL_MODE_MAP = {
+        MeshNormalMode.FROM_ASSET: gymapi.FROM_ASSET,
+        MeshNormalMode.COMPUTE_PER_VERTEX: gymapi.COMPUTE_PER_VERTEX,
+        MeshNormalMode.COMPUTE_PER_FACE: gymapi.COMPUTE_PER_FACE,
     }
 
     def __init__(self, cfg):
@@ -184,6 +189,8 @@ class IsaacGym(Simulator):
             asset_options.override_com = True
             asset_options.override_inertia = True
             asset_options.use_mesh_materials = True
+            if body.mesh_normal_mode is not None:
+                asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[body.mesh_normal_mode]
 
             self._assets[body.name] = self._gym.load_asset(
                 self._sim, asset_root, asset_file, options=asset_options
@@ -318,6 +325,7 @@ class IsaacGym(Simulator):
                 "dof_max_velocity",
                 "dof_position_gain",
                 "dof_velocity_gain",
+                "dof_armature",
             ):
                 if getattr(body, attr) is not None:
                     if self._get_slice_length(self._asset_dof_slice[x.name]) == 0:
@@ -347,6 +355,7 @@ class IsaacGym(Simulator):
                     or self._bodies[-1].dof_max_force is not None
                     or self._bodies[-1].dof_position_gain is not None
                     or self._bodies[-1].dof_velocity_gain is not None
+                    or self._bodies[-1].dof_armature is not None
                 ):
                     self._set_dof_props(self._bodies[-1], idx, set_drive_mode=True)
 
@@ -450,6 +459,8 @@ class IsaacGym(Simulator):
             dof_props["stiffness"] = self._get_body_attr_array(body, "dof_position_gain", 1, idx)
         if body.dof_velocity_gain is not None:
             dof_props["damping"] = self._get_body_attr_array(body, "dof_velocity_gain", 1, idx)
+        if body.dof_armature is not None:
+            dof_props["armature"] = self._get_body_attr_array(body, "dof_armature", 1, idx)
         self._gym.set_actor_dof_properties(
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )
@@ -616,6 +627,7 @@ class IsaacGym(Simulator):
                     "dof_max_velocity",
                     "dof_position_gain",
                     "dof_velocity_gain",
+                    "dof_armature",
                 ):
                     if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
                         if (
@@ -648,6 +660,7 @@ class IsaacGym(Simulator):
                     "dof_max_velocity",
                     "dof_position_gain",
                     "dof_velocity_gain",
+                    "dof_armature",
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(

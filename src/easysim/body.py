@@ -23,6 +23,7 @@ class Body:
         device=None,
         use_fixed_base=None,
         use_self_collision=None,
+        mesh_normal_mode=None,
         initial_base_position=None,
         initial_base_velocity=None,
         initial_dof_position=None,
@@ -40,6 +41,7 @@ class Body:
         dof_max_velocity=None,
         dof_position_gain=None,
         dof_velocity_gain=None,
+        dof_armature=None,
         dof_target_position=None,
         dof_target_velocity=None,
         dof_force=None,
@@ -50,6 +52,7 @@ class Body:
         self.device = device
         self.use_fixed_base = use_fixed_base
         self.use_self_collision = use_self_collision
+        self.mesh_normal_mode = mesh_normal_mode
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
         self.initial_dof_position = initial_dof_position
@@ -69,6 +72,7 @@ class Body:
         self.dof_max_velocity = dof_max_velocity
         self.dof_position_gain = dof_position_gain
         self.dof_velocity_gain = dof_velocity_gain
+        self.dof_armature = dof_armature
 
         self.dof_target_position = dof_target_position
         self.dof_target_velocity = dof_target_velocity
@@ -189,6 +193,16 @@ class Body:
     def use_self_collision(self, value):
         """ """
         self._use_self_collision = value
+
+    @property
+    def mesh_normal_mode(self):
+        """ """
+        return self._mesh_normal_mode
+
+    @mesh_normal_mode.setter
+    def mesh_normal_mode(self, value):
+        """ """
+        self._mesh_normal_mode = value
 
     @property
     def initial_dof_position(self):
@@ -411,6 +425,20 @@ class Body:
             if value.ndim not in (1, 2):
                 raise ValueError("'dof_velocity_gain' must have a number of dimensions of 1 or 2")
         self._dof_velocity_gain = value
+
+    @property
+    def dof_armature(self):
+        """ """
+        return self._dof_armature
+
+    @dof_armature.setter
+    def dof_armature(self, value):
+        """ """
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (1, 2):
+                raise ValueError("'dof_velocity_gain' must have a number of dimensions of 1 or 2")
+        self._dof_armature = value
 
     @property
     def dof_target_position(self):
