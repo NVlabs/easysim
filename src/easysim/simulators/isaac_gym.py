@@ -189,6 +189,8 @@ class IsaacGym(Simulator):
                 asset_options.angular_damping = body.link_angular_damping
             asset_options.override_com = True
             asset_options.override_inertia = True
+            if body.vhacd_enabled is not None:
+                asset_options.vhacd_enabled = body.vhacd_enabled
             asset_options.use_mesh_materials = True
             if body.mesh_normal_mode is not None:
                 asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[body.mesh_normal_mode]
