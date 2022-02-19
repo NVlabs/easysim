@@ -76,7 +76,7 @@ class IsaacGym(Simulator):
 
         self._created = False
         self._last_render_time = 0.0
-        self._count_render = 0
+        self._counter_render = 0
         self._render_time_step = max(1.0 / self._cfg.RENDER_FRAME_RATE, self._cfg.TIME_STEP)
         self._render_steps = self._render_time_step / self._cfg.TIME_STEP
 
@@ -805,8 +805,8 @@ class IsaacGym(Simulator):
                     self._enable_viewer_sync = not self._enable_viewer_sync
 
             if self._enable_viewer_sync:
-                if (self._count_render % self._render_steps) <= (
-                    self._count_render - 1
+                if (self._counter_render % self._render_steps) <= (
+                    self._counter_render - 1
                 ) % self._render_steps:
                     # Simulate real-time rendering with sleep if computation takes less than real time.
                     time_spent = time.time() - self._last_render_time
@@ -818,7 +818,7 @@ class IsaacGym(Simulator):
                     self._gym.step_graphics(self._sim)
                     self._gym.draw_viewer(self._viewer, self._sim)
 
-                self._count_render += 1
+                self._counter_render += 1
             else:
                 self._gym.poll_viewer_events(self._viewer)
 

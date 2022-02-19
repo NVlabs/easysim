@@ -449,7 +449,7 @@ class Body:
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
             if value.ndim not in (1, 2):
-                raise ValueError("'dof_velocity_gain' must have a number of dimensions of 1 or 2")
+                raise ValueError("'dof_armature' must have a number of dimensions of 1 or 2")
         self._dof_armature = value
 
     @property
