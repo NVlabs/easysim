@@ -152,7 +152,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError(
                     "'initial_base_position' must have a number of dimensions of 1 or 2"
                 )
@@ -170,7 +170,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError(
                     "'initial_base_velocity' must have a number of dimensions of 1 or 2"
                 )
@@ -238,7 +238,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError(
                     "'initial_dof_position' must have a number of dimensions of 1 or 2"
                 )
@@ -254,7 +254,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError(
                     "'initial_dof_velocity' must have a number of dimensions of 1 or 2"
                 )
@@ -474,7 +474,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError("'dof_target_position' must have a number of dimensions of 1 or 2")
         self._dof_target_position = value
 
@@ -488,7 +488,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError("'dof_target_velocity' must have a number of dimensions of 1 or 2")
         self._dof_target_velocity = value
 
@@ -502,7 +502,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() not in (1, 2):
+            if value.ndim not in (1, 2):
                 raise ValueError("'dof_force' must have a number of dimensions of 1 or 2")
         self._dof_force = value
 
@@ -516,7 +516,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() != 3:
+            if value.ndim != 3:
                 raise ValueError("'dof_state' must have a number of dimensions of 3")
         self._dof_state = value
 
@@ -530,7 +530,7 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.dim() != 3:
+            if value.ndim != 3:
                 raise ValueError("'link_state' must have a number of dimensions of 3")
         self._link_state = value
 
