@@ -106,7 +106,7 @@ class Bullet(Simulator):
             kwargs["useFixedBase"] = body.use_fixed_base
         if body.use_self_collision is not None and body.use_self_collision:
             kwargs["flags"] = self._p.URDF_USE_SELF_COLLISION
-        for attr in ("vhacd_enabled", "mesh_normal_mode"):
+        for attr in ("vhacd_enabled", "vhacd_params", "mesh_normal_mode"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
         self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)

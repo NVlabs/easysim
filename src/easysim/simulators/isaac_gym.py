@@ -191,6 +191,9 @@ class IsaacGym(Simulator):
             asset_options.override_inertia = True
             if body.vhacd_enabled is not None:
                 asset_options.vhacd_enabled = body.vhacd_enabled
+            if body.vhacd_params is not None:
+                for attr in body.vhacd_params:
+                    setattr(asset_options.vhacd_params, attr, body.vhacd_params[attr])
             asset_options.use_mesh_materials = True
             if body.mesh_normal_mode is not None:
                 asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[body.mesh_normal_mode]

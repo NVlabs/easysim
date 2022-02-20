@@ -24,6 +24,7 @@ class Body:
         use_fixed_base=None,
         use_self_collision=None,
         vhacd_enabled=None,
+        vhacd_params=None,
         mesh_normal_mode=None,
         initial_base_position=None,
         initial_base_velocity=None,
@@ -54,6 +55,7 @@ class Body:
         self.use_fixed_base = use_fixed_base
         self.use_self_collision = use_self_collision
         self.vhacd_enabled = vhacd_enabled
+        self.vhacd_params = vhacd_params
         self.mesh_normal_mode = mesh_normal_mode
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
@@ -205,6 +207,16 @@ class Body:
     def vhacd_enabled(self, value):
         """ """
         self._vhacd_enabled = value
+
+    @property
+    def vhacd_params(self):
+        """ """
+        return self._vhacd_params
+
+    @vhacd_params.setter
+    def vhacd_params(self, value):
+        """ """
+        self._vhacd_params = value
 
     @property
     def mesh_normal_mode(self):
