@@ -146,14 +146,9 @@ class Bullet(Simulator):
 
         # Reset DoF state.
         if len(self._dof_indices[body.name]) == 0:
-            if body.initial_dof_position is not None and body.initial_dof_position.shape[-1] != 0:
-                raise ValueError(
-                    f"Body '{body.name}' has 0 DoF but is given a non-empty 'initial_dof_position'"
-                )
-            if body.initial_dof_velocity is not None and body.initial_dof_velocity.shape[-1] != 0:
-                raise ValueError(
-                    f"Body '{body.name}' has 0 DoF but is given a non-empty 'initial_dof_velocity'"
-                )
+            for attr in ("initial_dof_position", "initial_dof_velocity"):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
         if body.initial_dof_position is not None:
             for i, j in enumerate(self._dof_indices[body.name]):
                 kwargs = {}
@@ -197,9 +192,7 @@ class Bullet(Simulator):
 
         if body.dof_control_mode is not None:
             if len(self._dof_indices[x.name]) == 0:
-                raise ValueError(
-                    f"Body '{x.name}' has 0 DoF but is given a non-empty 'dof_control_mode'"
-                )
+                raise ValueError(f"'dof_control_mode' must be None for body with 0 DoF: '{x.name}'")
             if (
                 body.dof_control_mode.ndim == 0
                 and body.dof_control_mode
@@ -444,7 +437,7 @@ class Bullet(Simulator):
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
-                            f"Body '{body.name}' has 0 DoF but is given a non-empty '{attr}'"
+                            f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
 

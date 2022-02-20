@@ -339,9 +339,7 @@ class IsaacGym(Simulator):
             ):
                 if getattr(body, attr) is not None:
                     if self._get_slice_length(self._asset_dof_slice[x.name]) == 0:
-                        raise ValueError(
-                            f"Body '{x.name}' has 0 DoF but is given a non-empty '{attr}'"
-                        )
+                        raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{x.name}'")
                     setattr(x, attr, getattr(body, attr).copy())
 
             self._bodies.append(x)
@@ -501,22 +499,11 @@ class IsaacGym(Simulator):
                 ] = body.initial_base_velocity
 
             if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
-                if (
-                    body.initial_dof_position is not None
-                    and body.initial_dof_position.shape[-1] != 0
-                ):
-                    raise ValueError(
-                        f"Body '{body.name}' has 0 DoF but is given a non-empty "
-                        "'initial_dof_position'"
-                    )
-                if (
-                    body.initial_dof_velocity is not None
-                    and body.initial_dof_velocity.shape[-1] != 0
-                ):
-                    raise ValueError(
-                        f"Body '{body.name}' has 0 DoF but is given a non-empty "
-                        "'initial_dof_velocity'"
-                    )
+                for attr in ("initial_dof_position", "initial_dof_velocity"):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
+                        )
             else:
                 if body.initial_dof_position is None:
                     self._dof_state.view(self._num_envs, -1, 2)[
@@ -674,7 +661,7 @@ class IsaacGym(Simulator):
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
-                            f"Body '{body.name}' has 0 DoF but is given a non-empty '{attr}'"
+                            f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
 
     def step(self, bodies):
@@ -691,7 +678,7 @@ class IsaacGym(Simulator):
                 for attr in ("dof_target_position", "dof_target_velocity", "dof_force"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
-                            f"Body '{body.name}' has 0 DoF but is given a non-empty '{attr}'"
+                            f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
 
