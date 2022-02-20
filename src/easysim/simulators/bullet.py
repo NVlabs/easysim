@@ -501,7 +501,7 @@ class Bullet(Simulator):
                                 "For Bullet, 'dof_max_force' can only be set in POSITION_CONTROL "
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
-                        kwargs["forces"] = self._get_body_attr_array(body, "dof_force", 1)
+                        kwargs["forces"] = self._get_body_attr_array(body, "dof_max_force", 1)
                     if DoFControlMode.POSITION_CONTROL in body.dof_control_mode:
                         self._p.setJointMotorControlArray(
                             self._body_ids[body.name],
