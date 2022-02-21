@@ -150,21 +150,7 @@ class Bullet(Simulator):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
         if body.initial_dof_position is not None:
-            for i, j in enumerate(self._dof_indices[body.name]):
-                kwargs = {}
-                if body.initial_dof_velocity is not None:
-                    if body.initial_dof_velocity.dim() == 1:
-                        kwargs["targetVelocity"] = body.initial_dof_velocity[i]
-                    if body.initial_dof_velocity.dim() == 2:
-                        kwargs["targetVelocity"] = body.initial_dof_velocity[0, i]
-                if body.initial_dof_position.dim() == 1:
-                    self._p.resetJointState(
-                        self._body_ids[body.name], j, body.initial_dof_position[i], **kwargs
-                    )
-                if body.initial_dof_position.dim() == 2:
-                    self._p.resetJointState(
-                        self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
-                    )
+            self._reset_dof_state(body)
         elif body.initial_dof_velocity is not None:
             raise ValueError(
                 "For Bullet, cannot reset 'initial_dof_velocity' without resetting "
@@ -172,6 +158,23 @@ class Bullet(Simulator):
             )
 
         body.contact_id = self._body_ids[body.name]
+
+    def _reset_dof_state(self, body):
+        for i, j in enumerate(self._dof_indices[body.name]):
+            kwargs = {}
+            if body.initial_dof_velocity is not None:
+                if body.initial_dof_velocity.dim() == 1:
+                    kwargs["targetVelocity"] = body.initial_dof_velocity[i]
+                if body.initial_dof_velocity.dim() == 2:
+                    kwargs["targetVelocity"] = body.initial_dof_velocity[0, i]
+            if body.initial_dof_position.dim() == 1:
+                self._p.resetJointState(
+                    self._body_ids[body.name], j, body.initial_dof_position[i], **kwargs
+                )
+            if body.initial_dof_position.dim() == 2:
+                self._p.resetJointState(
+                    self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
+                )
 
     def _cache_and_set_control(self, body):
         """ """
@@ -434,12 +437,22 @@ class Bullet(Simulator):
                     "dof_target_position",
                     "dof_target_velocity",
                     "dof_force",
+                    "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
+            else:
+                if body.env_ids_reset_dof_state is not None:
+                    if not np.array_equal(body.env_ids_reset_dof_state.cpu(), [0]):
+                        raise ValueError(
+                            "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
+                            f"'{body.name}'"
+                        )
+                    self._reset_dof_state(body)
+                    body.env_ids_reset_dof_state = None
 
             if not np.array_equal(body.dof_control_mode, self._bodies[b].dof_control_mode):
                 raise ValueError(

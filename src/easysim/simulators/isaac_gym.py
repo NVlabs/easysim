@@ -505,26 +505,7 @@ class IsaacGym(Simulator):
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
             else:
-                if body.initial_dof_position is None:
-                    self._dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 0
-                    ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 0
-                    ]
-                else:
-                    self._dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 0
-                    ] = body.initial_dof_position
-                if body.initial_dof_velocity is None:
-                    self._dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 1
-                    ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 1
-                    ]
-                else:
-                    self._dof_state.view(self._num_envs, -1, 2)[
-                        :, self._asset_dof_slice[body.name], 1
-                    ] = body.initial_dof_velocity
+                self._reset_dof_state_buffer(body)
 
         # Reset base state.
         if self._actor_root_state is not None:
@@ -550,6 +531,28 @@ class IsaacGym(Simulator):
             )
 
         self._check_and_update_props(bodies, env_ids=env_ids)
+
+    def _reset_dof_state_buffer(self, body):
+        if body.initial_dof_position is None:
+            self._dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 0
+            ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 0
+            ]
+        else:
+            self._dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 0
+            ] = body.initial_dof_position
+        if body.initial_dof_velocity is None:
+            self._dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 1
+            ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 1
+            ]
+        else:
+            self._dof_state.view(self._num_envs, -1, 2)[
+                :, self._asset_dof_slice[body.name], 1
+            ] = body.initial_dof_velocity
 
     def _check_and_update_props(self, bodies, env_ids=None):
         """ """
@@ -673,14 +676,29 @@ class IsaacGym(Simulator):
 
         self._check_and_update_props(bodies)
 
-        for body in bodies:
+        reset_dof_state = False
+        actor_indices = []
+
+        for b, body in enumerate(bodies):
             if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
-                for attr in ("dof_target_position", "dof_target_velocity", "dof_force"):
+                for attr in (
+                    "dof_target_position",
+                    "dof_target_velocity",
+                    "dof_force",
+                    "env_ids_reset_dof_state",
+                ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
+
+            if body.env_ids_reset_dof_state is not None:
+                self._reset_dof_state_buffer(body)
+                if not reset_dof_state:
+                    reset_dof_state = True
+                actor_indices.append(self._actor_indices[body.env_ids_reset_dof_state, b])
+                body.env_ids_reset_dof_state = None
 
             if body.dof_target_position is not None and (
                 body.dof_control_mode is None
@@ -768,6 +786,15 @@ class IsaacGym(Simulator):
                             if body.dof_control_mode[i] == DoFControlMode.TORQUE_CONTROL
                         ],
                     ] = body.dof_force[body.dof_control_mode == DoFControlMode.TORQUE_CONTROL]
+
+        if reset_dof_state:
+            actor_indices = torch.cat(actor_indices)
+            self._gym.set_dof_state_tensor_indexed(
+                self._sim,
+                gymtorch.unwrap_tensor(self._dof_state),
+                gymtorch.unwrap_tensor(actor_indices),
+                len(actor_indices),
+            )
 
         if self._dof_control_buffer is not None:
             self._gym.set_dof_position_target_tensor(
