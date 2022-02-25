@@ -128,6 +128,7 @@ class IsaacGym(Simulator):
             env_ids = torch.arange(self._num_envs, device=self._device)
 
         self._reset_idx(bodies, env_ids)
+        self._collect_state(bodies)
 
         self._contact = None
 
@@ -667,6 +668,20 @@ class IsaacGym(Simulator):
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
 
+    def _collect_state(self, bodies):
+        """ """
+        self._gym.refresh_dof_state_tensor(self._sim)
+        self._gym.refresh_rigid_body_state_tensor(self._sim)
+
+        for body in bodies:
+            if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
+                body.dof_state = self._dof_state.view(self._num_envs, -1, 2)[
+                    :, self._asset_dof_slice[body.name]
+                ].clone()
+            body.link_state = self._rigid_body_state.view(self._num_envs, -1, 13)[
+                :, self._asset_rigid_body_slice[body.name]
+            ].clone()
+
     def step(self, bodies):
         """ """
         if [body.name for body in bodies] != [body.name for body in self._bodies]:
@@ -839,17 +854,7 @@ class IsaacGym(Simulator):
             else:
                 self._gym.poll_viewer_events(self._viewer)
 
-        self._gym.refresh_dof_state_tensor(self._sim)
-        self._gym.refresh_rigid_body_state_tensor(self._sim)
-
-        for body in bodies:
-            if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
-                body.dof_state = self._dof_state.view(self._num_envs, -1, 2)[
-                    :, self._asset_dof_slice[body.name]
-                ].clone()
-            body.link_state = self._rigid_body_state.view(self._num_envs, -1, 13)[
-                :, self._asset_rigid_body_slice[body.name]
-            ].clone()
+        self._collect_state(bodies)
 
         self._contact = None
 
