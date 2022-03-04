@@ -91,6 +91,7 @@ class Body:
         self._created = True
 
     def __setattr__(self, key, value):
+        """ """
         if self._created and not hasattr(self, key):
             raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
         object.__setattr__(self, key, value)

@@ -369,6 +369,7 @@ class IsaacGym(Simulator):
                     self._set_dof_props(self._bodies[-1], idx, set_drive_mode=True)
 
     def _get_slice_length(self, slice_):
+        """ """
         return slice_.stop - slice_.start
 
     def _set_link_color(self, body, idx):
@@ -534,6 +535,7 @@ class IsaacGym(Simulator):
         self._check_and_update_props(bodies, env_ids=env_ids)
 
     def _reset_dof_state_buffer(self, body):
+        """ """
         if body.initial_dof_position is None:
             self._dof_state.view(self._num_envs, -1, 2)[
                 :, self._asset_dof_slice[body.name], 0
@@ -859,6 +861,7 @@ class IsaacGym(Simulator):
         self._contact = None
 
     def _get_slice_range(self, slice_):
+        """ """
         return range(slice_.start, slice_.stop)
 
     @property

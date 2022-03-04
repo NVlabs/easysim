@@ -162,6 +162,7 @@ class Bullet(Simulator):
         body.contact_id = self._body_ids[body.name]
 
     def _reset_dof_state(self, body):
+        """ """
         for i, j in enumerate(self._dof_indices[body.name]):
             kwargs = {}
             if body.initial_dof_velocity is not None:
