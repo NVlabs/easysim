@@ -209,15 +209,13 @@ class Bullet(Simulator):
                 )
                 or body.dof_control_mode.ndim == 1
                 and any(
-                    [
-                        y
-                        not in (
-                            DoFControlMode.POSITION_CONTROL,
-                            DoFControlMode.VELOCITY_CONTROL,
-                            DoFControlMode.TORQUE_CONTROL,
-                        )
-                        for y in body.dof_control_mode
-                    ]
+                    y
+                    not in (
+                        DoFControlMode.POSITION_CONTROL,
+                        DoFControlMode.VELOCITY_CONTROL,
+                        DoFControlMode.TORQUE_CONTROL,
+                    )
+                    for y in body.dof_control_mode
                 )
             ):
                 raise ValueError(
