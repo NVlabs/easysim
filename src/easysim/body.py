@@ -144,6 +144,8 @@ class Body:
         if hasattr(self, "_env_ids_reset_dof_state") and self.env_ids_reset_dof_state is not None:
             self.env_ids_reset_dof_state = self.env_ids_reset_dof_state.to(value)
 
+        if hasattr(self, "_dof_state") and self.dof_state is not None:
+            self.dof_state = self.dof_state.to(value)
         if hasattr(self, "_link_state") and self.link_state is not None:
             self.link_state = self.link_state.to(value)
 
@@ -382,7 +384,9 @@ class Body:
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
             if value.ndim not in (0, 1):
-                raise ValueError("'link_angular_damping' must have a number of dimensions of 0, 1")
+                raise ValueError(
+                    "'link_angular_damping' must have a number of dimensions of 0 or 1"
+                )
         self._link_angular_damping = value
 
     @property
@@ -512,6 +516,20 @@ class Body:
         self._dof_force = value
 
     @property
+    def env_ids_reset_dof_state(self):
+        """ """
+        return self._env_ids_reset_dof_state
+
+    @env_ids_reset_dof_state.setter
+    def env_ids_reset_dof_state(self, value):
+        """ """
+        if value is not None:
+            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            if value.ndim != 1:
+                raise ValueError("'env_ids_reset_dof_state' must have a number of dimensions of 1")
+        self._env_ids_reset_dof_state = value
+
+    @property
     def dof_state(self):
         """ """
         return self._dof_state
@@ -552,17 +570,3 @@ class Body:
             if value.ndim != 0:
                 raise ValueError("'contact_id' must have a number of dimensions of 0")
         self._contact_id = value
-
-    @property
-    def env_ids_reset_dof_state(self):
-        """ """
-        return self._env_ids_reset_dof_state
-
-    @env_ids_reset_dof_state.setter
-    def env_ids_reset_dof_state(self, value):
-        """ """
-        if value is not None:
-            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
-            if value.ndim != 1:
-                raise ValueError("'env_ids_reset_dof_state' must have a number of dimensions of 1")
-        self._env_ids_reset_dof_state = value
