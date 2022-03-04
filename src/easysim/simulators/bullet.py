@@ -124,13 +124,13 @@ class Bullet(Simulator):
 
         # Reset base state.
         if body.initial_base_position is not None:
-            if body.initial_base_position.dim() == 1:
+            if body.initial_base_position.ndim == 1:
                 self._p.resetBasePositionAndOrientation(
                     self._body_ids[body.name],
                     body.initial_base_position[:3],
                     body.initial_base_position[3:],
                 )
-            if body.initial_base_position.dim() == 2:
+            if body.initial_base_position.ndim == 2:
                 self._p.resetBasePositionAndOrientation(
                     self._body_ids[body.name],
                     body.initial_base_position[0, :3],
@@ -138,10 +138,10 @@ class Bullet(Simulator):
                 )
         if body.initial_base_velocity is not None:
             kwargs = {}
-            if body.initial_base_velocity.dim() == 1:
+            if body.initial_base_velocity.ndim == 1:
                 kwargs["linearVelocity"] = body.initial_base_velocity[:3]
                 kwargs["angularVelocity"] = body.initial_base_velocity[3:]
-            if body.initial_base_velocity.dim() == 2:
+            if body.initial_base_velocity.ndim == 2:
                 kwargs["linearVelocity"] = body.initial_base_velocity[0, :3]
                 kwargs["angularVelocity"] = body.initial_base_velocity[0, 3:]
             self._p.resetBaseVelocity(self._body_ids[body.name], **kwargs)
@@ -166,15 +166,15 @@ class Bullet(Simulator):
         for i, j in enumerate(self._dof_indices[body.name]):
             kwargs = {}
             if body.initial_dof_velocity is not None:
-                if body.initial_dof_velocity.dim() == 1:
+                if body.initial_dof_velocity.ndim == 1:
                     kwargs["targetVelocity"] = body.initial_dof_velocity[i]
-                if body.initial_dof_velocity.dim() == 2:
+                if body.initial_dof_velocity.ndim == 2:
                     kwargs["targetVelocity"] = body.initial_dof_velocity[0, i]
-            if body.initial_dof_position.dim() == 1:
+            if body.initial_dof_position.ndim == 1:
                 self._p.resetJointState(
                     self._body_ids[body.name], j, body.initial_dof_position[i], **kwargs
                 )
-            if body.initial_dof_position.dim() == 2:
+            if body.initial_dof_position.ndim == 2:
                 self._p.resetJointState(
                     self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
                 )
