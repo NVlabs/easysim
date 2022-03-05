@@ -318,18 +318,8 @@ class IsaacGym(Simulator):
         for body in bodies:
             x = type(body)()
             x.name = body.name
-            for attr in (
-                "link_color",
-                "link_collision_filter",
-                "link_lateral_friction",
-                "link_spinning_friction",
-                "link_rolling_friction",
-                "link_restitution",
-                "link_linear_damping",
-                "link_angular_damping",
-            ):
-                if getattr(body, attr) is not None:
-                    setattr(x, attr, getattr(body, attr).copy())
+            self._bodies.append(x)
+
             for attr in (
                 "dof_control_mode",
                 "dof_max_force",
@@ -339,34 +329,35 @@ class IsaacGym(Simulator):
                 "dof_armature",
             ):
                 if getattr(body, attr) is not None:
-                    if self._get_slice_length(self._asset_dof_slice[x.name]) == 0:
-                        raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{x.name}'")
-                    setattr(x, attr, getattr(body, attr).copy())
-
-            self._bodies.append(x)
+                    if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
+                        raise ValueError(
+                            f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
+                        )
 
             for idx in range(self._num_envs):
-                if self._bodies[-1].link_color is not None:
-                    self._set_link_color(self._bodies[-1], idx)
+                if body.link_color is not None:
+                    self._set_link_color(body, idx)
 
                 if (
-                    self._bodies[-1].link_collision_filter is not None
-                    or self._bodies[-1].link_lateral_friction is not None
-                    or self._bodies[-1].link_spinning_friction is not None
-                    or self._bodies[-1].link_rolling_friction is not None
-                    or self._bodies[-1].link_restitution is not None
+                    body.link_collision_filter is not None
+                    or body.link_lateral_friction is not None
+                    or body.link_spinning_friction is not None
+                    or body.link_rolling_friction is not None
+                    or body.link_restitution is not None
                 ):
-                    self._set_rigid_shape_props(self._bodies[-1], idx)
+                    self._set_rigid_shape_props(body, idx)
 
-                if self._get_slice_length(self._asset_dof_slice[x.name]) > 0 and (
-                    self._bodies[-1].dof_control_mode is not None
-                    or self._bodies[-1].dof_max_velocity is not None
-                    or self._bodies[-1].dof_max_force is not None
-                    or self._bodies[-1].dof_position_gain is not None
-                    or self._bodies[-1].dof_velocity_gain is not None
-                    or self._bodies[-1].dof_armature is not None
+                if self._get_slice_length(self._asset_dof_slice[body.name]) > 0 and (
+                    body.dof_control_mode is not None
+                    or body.dof_max_velocity is not None
+                    or body.dof_max_force is not None
+                    or body.dof_position_gain is not None
+                    or body.dof_velocity_gain is not None
+                    or body.dof_armature is not None
                 ):
-                    self._set_dof_props(self._bodies[-1], idx, set_drive_mode=True)
+                    self._set_dof_props(body, idx, set_drive_mode=True)
+
+            body.lock_attr_array()
 
     def _get_slice_length(self, slice_):
         """ """
@@ -559,103 +550,87 @@ class IsaacGym(Simulator):
 
     def _check_and_update_props(self, bodies, env_ids=None):
         """ """
-        for b, body in enumerate(bodies):
+        for body in bodies:
             for attr in ("link_color",):
-                if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
-                    if getattr(self._bodies[b], attr).ndim != 3 or getattr(body, attr).ndim != 3:
-                        raise ValueError(
-                            f"For Isaac Gym, '{attr}' can only be changed when a per-env "
-                            f"specification (3-D) is used: '{body.name}'"
-                        )
-                    mask_attr = getattr(body, attr) != getattr(self._bodies[b], attr)
+                if body.attr_array_dirty_flag[attr]:
                     if env_ids is not None and not np.all(
-                        np.isin(np.nonzero(mask_attr)[0], env_ids.cpu())
+                        np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
                     ):
                         raise ValueError(
                             f"For Isaac Gym, to change '{attr}' for some env also requires the env "
                             f"indices to be in `env_ids`: '{body.name}'"
                         )
-                    getattr(self._bodies[b], attr)[mask_attr] = getattr(body, attr)[mask_attr]
-                    env_ids_masked = np.nonzero(mask_attr)[0]
+                    env_ids_masked = np.nonzero(body.attr_array_dirty_mask[attr])[0]
                     for idx in env_ids_masked:
                         if attr == "link_color":
-                            self._set_link_color(self._bodies[b], idx)
+                            self._set_link_color(body, idx)
+                    body.attr_array_dirty_flag[attr] = False
+                    body.attr_array_dirty_mask[attr][:] = False
 
-            mask = np.zeros(self._num_envs, dtype=bool)
-            for attr in (
+            attr_rigid_shape_props = (
                 "link_collision_filter",
                 "link_lateral_friction",
                 "link_spinning_friction",
                 "link_rolling_friction",
                 "link_restitution",
-            ):
-                if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
-                    if getattr(self._bodies[b], attr).ndim != 2 or getattr(body, attr).ndim != 2:
-                        raise ValueError(
-                            f"For Isaac Gym, '{attr}' can only be changed when a per-env "
-                            f"specification (2-D) is used: '{body.name}'"
-                        )
-                    mask_attr = np.any(
-                        getattr(body, attr) != getattr(self._bodies[b], attr), axis=1
-                    )
-                    if env_ids is not None and not np.all(
-                        np.isin(np.nonzero(mask_attr)[0], env_ids.cpu())
-                    ):
-                        raise ValueError(
-                            f"For Isaac Gym, to change '{attr}' for some env also requires the env "
-                            f"indices to be in `env_ids`: '{body.name}'"
-                        )
-                    mask |= mask_attr
-                    getattr(self._bodies[b], attr)[mask_attr] = getattr(body, attr)[mask_attr]
-            env_ids_masked = np.nonzero(mask)[0]
-            for idx in env_ids_masked:
-                self._set_rigid_shape_props(self._bodies[b], idx)
+            )
+            if any(body.attr_array_dirty_flag[x] for x in attr_rigid_shape_props):
+                mask = np.zeros(self._num_envs, dtype=bool)
+                for attr in attr_rigid_shape_props:
+                    if body.attr_array_dirty_flag[attr]:
+                        if env_ids is not None and not np.all(
+                            np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
+                        ):
+                            raise ValueError(
+                                f"For Isaac Gym, to change '{attr}' for some env also requires the env "
+                                f"indices to be in `env_ids`: '{body.name}'"
+                            )
+                        mask |= body.attr_array_dirty_mask[attr]
+                        body.attr_array_dirty_flag[attr] = False
+                        body.attr_array_dirty_mask[attr][:] = False
+                env_ids_masked = np.nonzero(mask)[0]
+                for idx in env_ids_masked:
+                    self._set_rigid_shape_props(body, idx)
 
             for attr in ("link_linear_damping", "link_angular_damping"):
-                if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
+                if body.attr_array_dirty_flag[attr]:
                     raise ValueError(
                         f"For Isaac Gym, '{attr}' cannot be changed after the first reset: "
                         f"'{body.name}'"
                     )
 
             if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
-                if not np.array_equal(body.dof_control_mode, self._bodies[b].dof_control_mode):
+                if body.attr_array_dirty_flag["dof_control_mode"]:
                     raise ValueError(
                         "For Isaac Gym, 'dof_control_mode' cannot be changed after the first "
                         f"reset: '{body.name}'"
                     )
-                mask = np.zeros(self._num_envs, dtype=bool)
-                for attr in (
+                attr_dof_props = (
                     "dof_max_force",
                     "dof_max_velocity",
                     "dof_position_gain",
                     "dof_velocity_gain",
                     "dof_armature",
-                ):
-                    if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
-                        if (
-                            getattr(self._bodies[b], attr).ndim != 2
-                            or getattr(body, attr).ndim != 2
-                        ):
-                            raise ValueError(
-                                f"For Isaac Gym, '{attr}' can only be changed when a per-env "
-                                f"specification (2-D) is used: '{body.name}'"
-                            )
-                        mask_attr = np.any(
-                            getattr(body, attr) != getattr(self._bodies[b], attr), axis=1
-                        )
-                        if env_ids is not None and not np.all(
-                            np.isin(np.nonzero(mask_attr)[0], env_ids.cpu())
-                        ):
-                            raise ValueError(
-                                f"For Isaac Gym, to change '{attr}' for certain env also requires "
-                                f"the env index to be in `env_ids`: '{body.name}'"
-                            )
-                        mask |= mask_attr
-                        getattr(self._bodies[b], attr)[mask] = getattr(body, attr)[mask]
-                env_ids_masked = np.nonzero(mask)[0]
-                for idx in env_ids_masked:
-                    self._set_dof_props(self._bodies[b], idx)
+                )
+                if any(body.attr_array_dirty_flag[x] for x in attr_dof_props):
+                    mask = np.zeros(self._num_envs, dtype=bool)
+                    for attr in attr_dof_props:
+                        if body.attr_array_dirty_flag[attr]:
+                            if env_ids is not None and not np.all(
+                                np.isin(
+                                    np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu()
+                                )
+                            ):
+                                raise ValueError(
+                                    f"For Isaac Gym, to change '{attr}' for certain env also requires "
+                                    f"the env index to be in `env_ids`: '{body.name}'"
+                                )
+                            mask |= body.attr_array_dirty_mask[attr]
+                            body.attr_array_dirty_flag[attr] = False
+                            body.attr_array_dirty_mask[attr][:] = False
+                    env_ids_masked = np.nonzero(mask)[0]
+                    for idx in env_ids_masked:
+                        self._set_dof_props(body, idx)
             else:
                 for attr in (
                     "dof_control_mode",
@@ -665,7 +640,7 @@ class IsaacGym(Simulator):
                     "dof_velocity_gain",
                     "dof_armature",
                 ):
-                    if getattr(body, attr) is not None:
+                    if body.attr_array_dirty_flag[attr]:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )

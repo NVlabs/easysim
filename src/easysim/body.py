@@ -10,9 +10,28 @@
 import torch
 import numpy as np
 
+from contextlib import contextmanager
+
 
 class Body:
     """ """
+
+    _ATTR_ARRAY_NDIM = {
+        "link_color": 2,
+        "link_collision_filter": 1,
+        "link_lateral_friction": 1,
+        "link_spinning_friction": 1,
+        "link_rolling_friction": 1,
+        "link_restitution": 1,
+        "link_linear_damping": 0,
+        "link_angular_damping": 0,
+        "dof_control_mode": 0,
+        "dof_max_force": 1,
+        "dof_max_velocity": 1,
+        "dof_position_gain": 1,
+        "dof_velocity_gain": 1,
+        "dof_armature": 1,
+    }
 
     _created = False
 
@@ -49,6 +68,8 @@ class Body:
         dof_force=None,
     ):
         """ """
+        self._init_attr_array_pipeline()
+
         self.name = name
         self.urdf_file = urdf_file
         self.device = device
@@ -95,6 +116,15 @@ class Body:
         if self._created and not hasattr(self, key):
             raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
         object.__setattr__(self, key, value)
+
+    def _init_attr_array_pipeline(self):
+        """ """
+        self._attr_array_locked = {}
+        self._attr_array_dirty_flag = {}
+        self._attr_array_dirty_mask = {}
+        for attr in self._ATTR_ARRAY_NDIM:
+            self._attr_array_locked[attr] = False
+            self._attr_array_dirty_flag[attr] = False
 
     @property
     def name(self):
@@ -276,10 +306,21 @@ class Body:
     @link_color.setter
     def link_color(self, value):
         """ """
+        assert not self._attr_array_locked["link_color"], (
+            "'link_color' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (2, 3):
-                raise ValueError("'link_color' must have a number of dimensions of 2 or 3")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_color"],
+                self._ATTR_ARRAY_NDIM["link_color"] + 1,
+            ):
+                raise ValueError(
+                    "'link_color' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_color']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_color'] + 1}"
+                )
         self._link_color = value
 
     @property
@@ -290,11 +331,20 @@ class Body:
     @link_collision_filter.setter
     def link_collision_filter(self, value):
         """ """
+        assert not self._attr_array_locked["link_collision_filter"], (
+            "'link_collision_filter' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.int64)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_collision_filter"],
+                self._ATTR_ARRAY_NDIM["link_collision_filter"] + 1,
+            ):
                 raise ValueError(
-                    "'link_collision_filter' must have a number of dimensions of 1 or 2"
+                    "'link_collision_filter' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_collision_filter']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_collision_filter'] + 1}"
                 )
         self._link_collision_filter = value
 
@@ -306,11 +356,20 @@ class Body:
     @link_lateral_friction.setter
     def link_lateral_friction(self, value):
         """ """
+        assert not self._attr_array_locked["link_lateral_friction"], (
+            "'link_lateral_friction' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_lateral_friction"],
+                self._ATTR_ARRAY_NDIM["link_lateral_friction"] + 1,
+            ):
                 raise ValueError(
-                    "'link_lateral_friction' must have a number of dimensions of 1 or 2"
+                    "'link_lateral_friction' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_lateral_friction']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_lateral_friction'] + 1}"
                 )
         self._link_lateral_friction = value
 
@@ -322,11 +381,20 @@ class Body:
     @link_spinning_friction.setter
     def link_spinning_friction(self, value):
         """ """
+        assert not self._attr_array_locked["link_spinning_friction"], (
+            "'link_spinning_friction' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_spinning_friction"],
+                self._ATTR_ARRAY_NDIM["link_spinning_friction"] + 1,
+            ):
                 raise ValueError(
-                    "'link_spinning_friction' must have a number of dimensions of 1 or 2"
+                    "'link_spinning_friction' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_spinning_friction']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_spinning_friction'] + 1}"
                 )
         self._link_spinning_friction = value
 
@@ -338,11 +406,20 @@ class Body:
     @link_rolling_friction.setter
     def link_rolling_friction(self, value):
         """ """
+        assert not self._attr_array_locked["link_rolling_friction"], (
+            "'link_rolling_friction' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_rolling_friction"],
+                self._ATTR_ARRAY_NDIM["link_rolling_friction"] + 1,
+            ):
                 raise ValueError(
-                    "'link_rolling_friction' must have a number of dimensions of 1 or 2"
+                    "'link_rolling_friction' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_rolling_friction']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_rolling_friction'] + 1}"
                 )
         self._link_rolling_friction = value
 
@@ -354,10 +431,21 @@ class Body:
     @link_restitution.setter
     def link_restitution(self, value):
         """ """
+        assert not self._attr_array_locked["link_restitution"], (
+            "'link_restitution' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'link_restitution' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_restitution"],
+                self._ATTR_ARRAY_NDIM["link_restitution"] + 1,
+            ):
+                raise ValueError(
+                    "'link_restitution' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_restitution']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_restitution'] + 1}"
+                )
         self._link_restitution = value
 
     @property
@@ -368,10 +456,21 @@ class Body:
     @link_linear_damping.setter
     def link_linear_damping(self, value):
         """ """
+        assert not self._attr_array_locked["link_linear_damping"], (
+            "'link_linear_damping' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (0, 1):
-                raise ValueError("'link_linear_damping' must have a number of dimensions of 0 or 1")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_linear_damping"],
+                self._ATTR_ARRAY_NDIM["link_linear_damping"] + 1,
+            ):
+                raise ValueError(
+                    "'link_linear_damping' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_linear_damping']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_linear_damping'] + 1}"
+                )
         self._link_linear_damping = value
 
     @property
@@ -382,11 +481,20 @@ class Body:
     @link_angular_damping.setter
     def link_angular_damping(self, value):
         """ """
+        assert not self._attr_array_locked["link_angular_damping"], (
+            "'link_angular_damping' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (0, 1):
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_angular_damping"],
+                self._ATTR_ARRAY_NDIM["link_angular_damping"] + 1,
+            ):
                 raise ValueError(
-                    "'link_angular_damping' must have a number of dimensions of 0 or 1"
+                    "'link_angular_damping' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_angular_damping']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_angular_damping'] + 1}"
                 )
         self._link_angular_damping = value
 
@@ -398,10 +506,21 @@ class Body:
     @dof_control_mode.setter
     def dof_control_mode(self, value):
         """ """
+        assert not self._attr_array_locked["dof_control_mode"], (
+            "'dof_control_mode' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.int64)
-            if value.ndim not in (0, 1):
-                raise ValueError("'dof_control_mode' must have a number of dimensions of 0 or 1")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_control_mode"],
+                self._ATTR_ARRAY_NDIM["dof_control_mode"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_control_mode' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_control_mode']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_control_mode'] + 1}"
+                )
         self._dof_control_mode = value
 
     @property
@@ -412,10 +531,21 @@ class Body:
     @dof_max_force.setter
     def dof_max_force(self, value):
         """ """
+        assert not self._attr_array_locked["dof_max_force"], (
+            "'dof_max_force' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_max_force' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_max_force"],
+                self._ATTR_ARRAY_NDIM["dof_max_force"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_max_force' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_max_force']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_max_force'] + 1}"
+                )
         self._dof_max_force = value
 
     @property
@@ -426,10 +556,21 @@ class Body:
     @dof_max_velocity.setter
     def dof_max_velocity(self, value):
         """ """
+        assert not self._attr_array_locked["dof_max_velocity"], (
+            "'dof_max_velocity' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_max_velocity' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_max_velocity"],
+                self._ATTR_ARRAY_NDIM["dof_max_velocity"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_max_velocity' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_max_velocity']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_max_velocity'] + 1}"
+                )
         self._dof_max_velocity = value
 
     @property
@@ -440,10 +581,21 @@ class Body:
     @dof_position_gain.setter
     def dof_position_gain(self, value):
         """ """
+        assert not self._attr_array_locked["dof_position_gain"], (
+            "'dof_position_gain' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_position_gain' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_position_gain"],
+                self._ATTR_ARRAY_NDIM["dof_position_gain"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_position_gain' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_position_gain']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_position_gain'] + 1}"
+                )
         self._dof_position_gain = value
 
     @property
@@ -454,10 +606,21 @@ class Body:
     @dof_velocity_gain.setter
     def dof_velocity_gain(self, value):
         """ """
+        assert not self._attr_array_locked["dof_velocity_gain"], (
+            "'dof_velocity_gain' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_velocity_gain' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_velocity_gain"],
+                self._ATTR_ARRAY_NDIM["dof_velocity_gain"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_velocity_gain' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_velocity_gain']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_velocity_gain'] + 1}"
+                )
         self._dof_velocity_gain = value
 
     @property
@@ -468,10 +631,21 @@ class Body:
     @dof_armature.setter
     def dof_armature(self, value):
         """ """
+        assert not self._attr_array_locked["dof_armature"], (
+            "'dof_armature' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_armature' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_armature"],
+                self._ATTR_ARRAY_NDIM["dof_armature"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_armature' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_armature']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_armature'] + 1}"
+                )
         self._dof_armature = value
 
     @property
@@ -571,3 +745,49 @@ class Body:
             if value.ndim != 0:
                 raise ValueError("'contact_id' must have a number of dimensions of 0")
         self._contact_id = value
+
+    def lock_attr_array(self):
+        """ """
+        for k in self._attr_array_locked:
+            if not self._attr_array_locked[k]:
+                self._attr_array_locked[k] = True
+            if getattr(self, k) is not None:
+                getattr(self, k).flags.writeable = False
+
+    def update_attr_array(self, attr, env_ids, value):
+        """ """
+        if getattr(self, attr).ndim != self._ATTR_ARRAY_NDIM[attr] + 1:
+            raise ValueError(
+                f"'{attr}' can only be updated when a per-env specification (ndim: "
+                f"{self._ATTR_ARRAY_NDIM[attr] + 1}) is used"
+            )
+
+        with self._make_attr_array_writeable(attr):
+            getattr(self, attr)[env_ids] = value
+
+        if not self._attr_array_dirty_flag[attr]:
+            self._attr_array_dirty_flag[attr] = True
+        try:
+            self._attr_array_dirty_mask[attr][env_ids] = True
+        except KeyError:
+            self._attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
+            self._attr_array_dirty_mask[attr][env_ids] = True
+
+    @contextmanager
+    def _make_attr_array_writeable(self, attr):
+        """ """
+        try:
+            getattr(self, attr).flags.writeable = True
+            yield
+        finally:
+            getattr(self, attr).flags.writeable = False
+
+    @property
+    def attr_array_dirty_flag(self):
+        """ """
+        return self._attr_array_dirty_flag
+
+    @property
+    def attr_array_dirty_mask(self):
+        """ """
+        return self._attr_array_dirty_mask

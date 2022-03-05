@@ -71,7 +71,7 @@ class Bullet(Simulator):
 
             for body in bodies:
                 self._load_body(body)
-                self._cache_and_set_control(body)
+                self._cache_and_set_control_and_props(body)
 
             if (
                 self._cfg.RENDER
@@ -179,26 +179,17 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
                 )
 
-    def _cache_and_set_control(self, body):
+    def _cache_and_set_control_and_props(self, body):
         """ """
         x = type(body)()
         x.name = body.name
-        for attr in (
-            "link_color",
-            "link_collision_filter",
-            "link_lateral_friction",
-            "link_spinning_friction",
-            "link_rolling_friction",
-            "link_restitution",
-            "link_linear_damping",
-            "link_angular_damping",
-        ):
-            if getattr(body, attr) is not None:
-                setattr(x, attr, getattr(body, attr).copy())
+        self._bodies.append(x)
 
         if body.dof_control_mode is not None:
-            if len(self._dof_indices[x.name]) == 0:
-                raise ValueError(f"'dof_control_mode' must be None for body with 0 DoF: '{x.name}'")
+            if len(self._dof_indices[body.name]) == 0:
+                raise ValueError(
+                    f"'dof_control_mode' must be None for body with 0 DoF: '{body.name}'"
+                )
             if (
                 body.dof_control_mode.ndim == 0
                 and body.dof_control_mode
@@ -220,49 +211,56 @@ class Bullet(Simulator):
             ):
                 raise ValueError(
                     "Bullet only supports POSITION_CONTROL, VELOCITY_CONTROL, and TORQUE_CONTROL "
-                    f"modes: '{x.name}'"
+                    f"modes: '{body.name}'"
                 )
-            x.dof_control_mode = body.dof_control_mode.copy()
 
-            if x.dof_control_mode.ndim == 0 and x.dof_control_mode == DoFControlMode.TORQUE_CONTROL:
+            if (
+                body.dof_control_mode.ndim == 0
+                and body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+            ):
                 self._p.setJointMotorControlArray(
-                    self._body_ids[x.name],
-                    self._dof_indices[x.name],
+                    self._body_ids[body.name],
+                    self._dof_indices[body.name],
                     self._p.VELOCITY_CONTROL,
-                    forces=[0] * len(self._dof_indices[x.name]),
+                    forces=[0] * len(self._dof_indices[body.name]),
                 )
-            if x.dof_control_mode.ndim == 1 and DoFControlMode.TORQUE_CONTROL in x.dof_control_mode:
+            if (
+                body.dof_control_mode.ndim == 1
+                and DoFControlMode.TORQUE_CONTROL in body.dof_control_mode
+            ):
                 self._p.setJointMotorControlArray(
-                    self._body_ids[x.name],
-                    self._dof_indices[x.name][x.dof_control_mode == DoFControlMode.TORQUE_CONTROL],
+                    self._body_ids[body.name],
+                    self._dof_indices[body.name][
+                        body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+                    ],
                     self._p.VELOCITY_CONTROL,
                     forces=[0]
                     * len(
-                        self._dof_indices[x.name][
-                            x.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+                        self._dof_indices[body.name][
+                            body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
                         ]
                     ),
                 )
-        elif len(self._dof_indices[x.name]) != 0:
+        elif len(self._dof_indices[body.name]) != 0:
             raise ValueError(
-                f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{x.name}'"
+                f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
             )
 
-        self._bodies.append(x)
-
-        if self._bodies[-1].link_color is not None:
-            self._set_link_color(self._bodies[-1])
-        if self._bodies[-1].link_collision_filter is not None:
-            self._set_link_collision_filter(self._bodies[-1])
+        if body.link_color is not None:
+            self._set_link_color(body)
+        if body.link_collision_filter is not None:
+            self._set_link_collision_filter(body)
         if (
-            self._bodies[-1].link_lateral_friction is not None
-            or self._bodies[-1].link_spinning_friction is not None
-            or self._bodies[-1].link_rolling_friction is not None
-            or self._bodies[-1].link_restitution is not None
-            or self._bodies[-1].link_linear_damping is not None
-            or self._bodies[-1].link_angular_damping is not None
+            body.link_lateral_friction is not None
+            or body.link_spinning_friction is not None
+            or body.link_rolling_friction is not None
+            or body.link_restitution is not None
+            or body.link_linear_damping is not None
+            or body.link_angular_damping is not None
         ):
-            self._set_link_dynamics(self._bodies[-1])
+            self._set_link_dynamics(body)
+
+        body.lock_attr_array()
 
     def _set_link_color(self, body):
         """ """
@@ -403,13 +401,13 @@ class Bullet(Simulator):
                 # Add body.
                 with self._disable_cov_rendering():
                     self._load_body(body)
-                    self._cache_and_set_control(body)
+                    self._cache_and_set_control_and_props(body)
 
         assert [body.name for body in bodies] == [
             body.name for body in self._bodies
         ], "Mismatched input and cached bodies"
 
-        for b, body in enumerate(bodies):
+        for body in bodies:
             set_link_dynamics = False
             for attr in (
                 "link_color",
@@ -421,14 +419,11 @@ class Bullet(Simulator):
                 "link_linear_damping",
                 "link_angular_damping",
             ):
-                if not np.array_equal(getattr(body, attr), getattr(self._bodies[b], attr)):
-                    if getattr(body, attr) is None:
-                        raise ValueError(f"'{attr}' cannot be changed to None: '{body.name}'")
-                    setattr(self._bodies[b], attr, getattr(body, attr).copy())
+                if body.attr_array_dirty_flag[attr]:
                     if attr == "link_color":
-                        self._set_link_color(self._bodies[b])
+                        self._set_link_color(body)
                     if attr == "link_collision_filter":
-                        self._set_link_collision_filter(self._bodies[b])
+                        self._set_link_collision_filter(body)
                     if (
                         attr
                         in (
@@ -442,8 +437,9 @@ class Bullet(Simulator):
                         and not set_link_dynamics
                     ):
                         set_link_dynamics = True
+                    body.attr_array_dirty_flag[attr] = False
             if set_link_dynamics:
-                self._set_link_dynamics(self._bodies[b])
+                self._set_link_dynamics(body)
 
             for attr in ("dof_armature",):
                 if getattr(body, attr) is not None:
@@ -476,7 +472,7 @@ class Bullet(Simulator):
                     self._reset_dof_state(body)
                     body.env_ids_reset_dof_state = None
 
-            if not np.array_equal(body.dof_control_mode, self._bodies[b].dof_control_mode):
+            if body.attr_array_dirty_flag["dof_control_mode"]:
                 raise ValueError(
                     "For Bullet, 'dof_control_mode' cannot be changed after each reset: "
                     f"'{body.name}'"
