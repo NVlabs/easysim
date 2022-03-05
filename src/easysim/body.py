@@ -78,6 +78,7 @@ class Body:
     ):
         """ """
         self._init_attr_array_pipeline()
+        self._init_callback()
 
         self.name = name
         self.urdf_file = urdf_file
@@ -122,7 +123,8 @@ class Body:
 
     def __setattr__(self, key, value):
         """ """
-        if self._created and not hasattr(self, key):
+        # Exclude `dof_state` and `link_state` to prevent infinite recursion in property calls.
+        if self._created and key not in ("dof_state", "link_state") and not hasattr(self, key):
             raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
         object.__setattr__(self, key, value)
 
@@ -134,6 +136,11 @@ class Body:
         for attr in self._ATTR_ARRAY_NDIM:
             self._attr_array_locked[attr] = False
             self._attr_array_dirty_flag[attr] = False
+
+    def _init_callback(self):
+        """ """
+        self._callback_collect_dof_state = None
+        self._callback_collect_link_state = None
 
     @property
     def name(self):
@@ -757,6 +764,8 @@ class Body:
     @property
     def dof_state(self):
         """ """
+        if self._dof_state is None and self._callback_collect_dof_state is not None:
+            self._callback_collect_dof_state(self)
         return self._dof_state
 
     @dof_state.setter
@@ -771,6 +780,8 @@ class Body:
     @property
     def link_state(self):
         """ """
+        if self._link_state is None and self._callback_collect_link_state is not None:
+            self._callback_collect_link_state(self)
         return self._link_state
 
     @link_state.setter
@@ -857,3 +868,11 @@ class Body:
     def attr_array_dirty_mask(self):
         """ """
         return self._attr_array_dirty_mask
+
+    def set_callback_collect_dof_state(self, callback):
+        """ """
+        self._callback_collect_dof_state = callback
+
+    def set_callback_collect_link_state(self, callback):
+        """ """
+        self._callback_collect_link_state = callback

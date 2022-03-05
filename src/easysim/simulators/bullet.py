@@ -72,6 +72,7 @@ class Bullet(Simulator):
             for body in bodies:
                 self._load_body(body)
                 self._cache_and_set_control_and_props(body)
+                self._set_callback(body)
 
             if (
                 self._cfg.RENDER
@@ -82,8 +83,7 @@ class Bullet(Simulator):
                     self._cfg.INIT_VIEWER_CAMERA_POSITION, self._cfg.INIT_VIEWER_CAMERA_TARGET
                 )
 
-        self._collect_state(bodies)
-
+        self._clear_state(bodies)
         self._contact = None
 
     @contextmanager
@@ -334,6 +334,33 @@ class Bullet(Simulator):
                 self._body_ids[body.name], -1, **{k: v for k, v in kwargs.items()}
             )
 
+    def _set_callback(self, body):
+        """ """
+        body.set_callback_collect_dof_state(self._collect_dof_state)
+        body.set_callback_collect_link_state(self._collect_link_state)
+
+    def _collect_dof_state(self, body):
+        """ """
+        if self._num_links[body.name] > 1:
+            joint_states = self._p.getJointStates(
+                self._body_ids[body.name], self._dof_indices[body.name]
+            )
+            dof_state = [x[0:2] for x in joint_states]
+            body.dof_state = [dof_state]
+
+    def _collect_link_state(self, body):
+        """ """
+        pos, orn = self._p.getBasePositionAndOrientation(self._body_ids[body.name])
+        lin, ang = self._p.getBaseVelocity(self._body_ids[body.name])
+        link_state = [pos + orn + lin + ang]
+        if self._num_links[body.name] > 1:
+            link_indices = [*range(0, self._num_links[body.name] - 1)]
+            link_states = self._p.getLinkStates(
+                self._body_ids[body.name], link_indices, computeLinkVelocity=1
+            )
+            link_state += [x[4] + x[5] + x[6] + x[7] for x in link_states]
+        body.link_state = [link_state]
+
     def _set_viewer_camera_pose(self, position, target):
         """ """
         disp = [x - y for x, y in zip(position, target)]
@@ -345,26 +372,11 @@ class Bullet(Simulator):
 
         self._p.resetDebugVisualizerCamera(dist, yaw, pitch, target)
 
-    def _collect_state(self, bodies):
+    def _clear_state(self, bodies):
         """ """
         for body in bodies:
-            if self._num_links[body.name] > 1:
-                joint_states = self._p.getJointStates(
-                    self._body_ids[body.name], self._dof_indices[body.name]
-                )
-                dof_state = [x[0:2] for x in joint_states]
-                body.dof_state = [dof_state]
-
-            pos, orn = self._p.getBasePositionAndOrientation(self._body_ids[body.name])
-            lin, ang = self._p.getBaseVelocity(self._body_ids[body.name])
-            link_state = [pos + orn + lin + ang]
-            if self._num_links[body.name] > 1:
-                link_indices = [*range(0, self._num_links[body.name] - 1)]
-                link_states = self._p.getLinkStates(
-                    self._body_ids[body.name], link_indices, computeLinkVelocity=1
-                )
-                link_state += [x[4] + x[5] + x[6] + x[7] for x in link_states]
-            body.link_state = [link_state]
+            body.dof_state = None
+            body.link_state = None
 
     def step(self, bodies):
         """ """
@@ -657,8 +669,7 @@ class Bullet(Simulator):
 
         self._p.stepSimulation()
 
-        self._collect_state(bodies)
-
+        self._clear_state(bodies)
         self._contact = None
 
     @property
