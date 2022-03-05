@@ -365,7 +365,7 @@ class IsaacGym(Simulator):
 
     def _set_link_color(self, body, idx):
         """ """
-        link_color = self._get_body_attr_array(body, "link_color", 2, idx)
+        link_color = body.get_attr_array("link_color", idx)
         if len(link_color) != self._get_slice_length(self._asset_rigid_body_slice[body.name]):
             raise ValueError(
                 f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
@@ -382,14 +382,6 @@ class IsaacGym(Simulator):
                 gymapi.Vec3(*link_color[i]),
             )
 
-    def _get_body_attr_array(self, body, attr, ndim, idx):
-        """ """
-        array = getattr(body, attr)
-        if array.ndim == ndim:
-            return array
-        if array.ndim == ndim + 1:
-            return array[idx]
-
     def _set_rigid_shape_props(self, body, idx):
         """ """
         for attr in (
@@ -399,38 +391,34 @@ class IsaacGym(Simulator):
             "link_rolling_friction",
             "link_restitution",
         ):
-            if getattr(body, attr) is not None:
-                if (
-                    len(self._get_body_attr_array(body, attr, 1, idx))
-                    != self._asset_rigid_shape_count[body.name]
-                ):
-                    raise ValueError(
-                        f"Size of '{attr}' in the link dimension "
-                        f"({len(self._get_body_attr_array(body, attr, 1, idx))}) should match the "
-                        f"number of rigid shapes ({self._asset_rigid_shape_count[body.name]}): "
-                        f"'{body.name}'"
-                    )
+            if (
+                getattr(body, attr) is not None
+                and len(body.get_attr_array(attr, idx)) != self._asset_rigid_shape_count[body.name]
+            ):
+                raise ValueError(
+                    f"Size of '{attr}' in the link dimension "
+                    f"({len(body.get_attr_array(attr, idx))}) should match the number of rigid "
+                    f"shapes ({self._asset_rigid_shape_count[body.name]}): '{body.name}'"
+                )
         rigid_shape_props = self._gym.get_asset_rigid_shape_properties(self._assets[body.name])
         if body.link_collision_filter is not None:
-            link_collision_filter = self._get_body_attr_array(body, "link_collision_filter", 1, idx)
+            link_collision_filter = body.get_attr_array("link_collision_filter", idx)
             for i, prop in enumerate(rigid_shape_props):
                 prop.filter = link_collision_filter[i]
         if body.link_lateral_friction is not None:
-            link_lateral_friction = self._get_body_attr_array(body, "link_lateral_friction", 1, idx)
+            link_lateral_friction = body.get_attr_array("link_lateral_friction", idx)
             for i, prop in enumerate(rigid_shape_props):
                 prop.friction = link_lateral_friction[i]
         if body.link_spinning_friction is not None:
-            link_spinning_friction = self._get_body_attr_array(
-                body, "link_spinning_friction", 1, idx
-            )
+            link_spinning_friction = body.get_attr_array("link_spinning_friction", idx)
             for i, prop in enumerate(rigid_shape_props):
                 prop.torsion_friction = link_spinning_friction[i]
         if body.link_rolling_friction is not None:
-            link_rolling_friction = self._get_body_attr_array(body, "link_rolling_friction", 1, idx)
+            link_rolling_friction = body.get_attr_array("link_rolling_friction", idx)
             for i, prop in enumerate(rigid_shape_props):
                 prop.rolling_fiction = link_rolling_friction[i]
         if body.link_restitution is not None:
-            link_restitution = self._get_body_attr_array(body, "link_restitution", 1, idx)
+            link_restitution = body.get_attr_array("link_restitution", idx)
             for i, prop in enumerate(rigid_shape_props):
                 prop.restitution = link_restitution[i]
         self._gym.set_actor_rigid_shape_properties(
@@ -453,15 +441,15 @@ class IsaacGym(Simulator):
                         self._DOF_CONTROL_MODE_MAP[x] for x in body.dof_control_mode
                     ]
         if body.dof_max_velocity is not None:
-            dof_props["velocity"] = self._get_body_attr_array(body, "dof_max_velocity", 1, idx)
+            dof_props["velocity"] = body.get_attr_array("dof_max_velocity", idx)
         if body.dof_max_force is not None:
-            dof_props["effort"] = self._get_body_attr_array(body, "dof_max_force", 1, idx)
+            dof_props["effort"] = body.get_attr_array("dof_max_force", idx)
         if body.dof_position_gain is not None:
-            dof_props["stiffness"] = self._get_body_attr_array(body, "dof_position_gain", 1, idx)
+            dof_props["stiffness"] = body.get_attr_array("dof_position_gain", idx)
         if body.dof_velocity_gain is not None:
-            dof_props["damping"] = self._get_body_attr_array(body, "dof_velocity_gain", 1, idx)
+            dof_props["damping"] = body.get_attr_array("dof_velocity_gain", idx)
         if body.dof_armature is not None:
-            dof_props["armature"] = self._get_body_attr_array(body, "dof_armature", 1, idx)
+            dof_props["armature"] = body.get_attr_array("dof_armature", idx)
         self._gym.set_actor_dof_properties(
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )

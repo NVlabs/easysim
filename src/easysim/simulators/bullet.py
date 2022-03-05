@@ -264,7 +264,7 @@ class Bullet(Simulator):
 
     def _set_link_color(self, body):
         """ """
-        link_color = self._get_body_attr_array(body, "link_color", 2)
+        link_color = body.get_attr_array("link_color", 0)
         if len(link_color) != self._num_links[body.name]:
             raise ValueError(
                 f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
@@ -273,22 +273,9 @@ class Bullet(Simulator):
         for i in range(-1, self._num_links[body.name] - 1):
             self._p.changeVisualShape(self._body_ids[body.name], i, rgbaColor=link_color[i + 1])
 
-    def _get_body_attr_array(self, body, attr, ndim):
-        """ """
-        array = getattr(body, attr)
-        if array.ndim == ndim:
-            return array
-        if array.ndim == ndim + 1:
-            if len(array) != 1:
-                raise ValueError(
-                    f"For Bullet, a per-env specification for '{attr}' must have the first "
-                    f"dimension (number of envs) of size 1: '{body.name}'"
-                )
-            return array[0]
-
     def _set_link_collision_filter(self, body):
         """ """
-        link_collision_filter = self._get_body_attr_array(body, "link_collision_filter", 1)
+        link_collision_filter = body.get_attr_array("link_collision_filter", 0)
         if len(link_collision_filter) != self._num_links[body.name]:
             raise ValueError(
                 "Size of 'link_collision_filter' in the link dimension "
@@ -311,24 +298,24 @@ class Bullet(Simulator):
             "link_rolling_friction",
             "link_restitution",
         ):
-            if getattr(body, attr) is not None:
-                if len(self._get_body_attr_array(body, attr, 1)) != self._num_links[body.name]:
-                    raise ValueError(
-                        f"Size of '{attr}' in the link dimension "
-                        f"({len(self._get_body_attr_array(body, attr, 1))}) should match the "
-                        f"number of links ({self._num_links[body.name]}): '{body.name}'"
-                    )
+            if (
+                getattr(body, attr) is not None
+                and len(body.get_attr_array(attr, 0)) != self._num_links[body.name]
+            ):
+                raise ValueError(
+                    f"Size of '{attr}' in the link dimension ({len(body.get_attr_array(attr, 0))}) "
+                    f"should match the number of links ({self._num_links[body.name]}): "
+                    f"'{body.name}'"
+                )
         kwargs = {}
         if body.link_lateral_friction is not None:
-            kwargs["lateralFriction"] = self._get_body_attr_array(body, "link_lateral_friction", 1)
+            kwargs["lateralFriction"] = body.get_attr_array("link_lateral_friction", 0)
         if body.link_spinning_friction is not None:
-            kwargs["spinningFriction"] = self._get_body_attr_array(
-                body, "link_spinning_friction", 1
-            )
+            kwargs["spinningFriction"] = body.get_attr_array("link_spinning_friction", 0)
         if body.link_rolling_friction is not None:
-            kwargs["rollingFriction"] = self._get_body_attr_array(body, "link_rolling_friction", 1)
+            kwargs["rollingFriction"] = body.get_attr_array("link_rolling_friction", 0)
         if body.link_restitution is not None:
-            kwargs["restitution"] = self._get_body_attr_array(body, "link_restitution", 1)
+            kwargs["restitution"] = body.get_attr_array("link_restitution", 0)
         if len(kwargs) > 0:
             for i in range(-1, self._num_links[body.name] - 1):
                 self._p.changeDynamics(
@@ -339,9 +326,9 @@ class Bullet(Simulator):
         #     https://github.com/bulletphysics/bullet3/blob/740d2b978352b16943b24594572586d95d476466/examples/SharedMemory/PhysicsClientC_API.cpp#L3430
         kwargs = {}
         if body.link_linear_damping is not None:
-            kwargs["linearDamping"] = self._get_body_attr_array(body, "link_linear_damping", 0)
+            kwargs["linearDamping"] = body.get_attr_array("link_linear_damping", 0)
         if body.link_angular_damping is not None:
-            kwargs["angularDamping"] = self._get_body_attr_array(body, "link_angular_damping", 0)
+            kwargs["angularDamping"] = body.get_attr_array("link_angular_damping", 0)
         if len(kwargs) > 0:
             self._p.changeDynamics(
                 self._body_ids[body.name], -1, **{k: v for k, v in kwargs.items()}
@@ -483,21 +470,13 @@ class Bullet(Simulator):
             if body.dof_max_velocity is None:
                 kwargs = {}
                 if body.dof_target_position is not None:
-                    kwargs["targetPositions"] = self._get_body_attr_tensor(
-                        body, "dof_target_position", 1
-                    )
+                    kwargs["targetPositions"] = body.get_attr_tensor("dof_target_position", 0)
                 if body.dof_target_velocity is not None:
-                    kwargs["targetVelocities"] = self._get_body_attr_tensor(
-                        body, "dof_target_velocity", 1
-                    )
+                    kwargs["targetVelocities"] = body.get_attr_tensor("dof_target_velocity", 0)
                 if body.dof_position_gain is not None:
-                    kwargs["positionGains"] = self._get_body_attr_array(
-                        body, "dof_position_gain", 1
-                    )
+                    kwargs["positionGains"] = body.get_attr_array("dof_position_gain", 0)
                 if body.dof_velocity_gain is not None:
-                    kwargs["velocityGains"] = self._get_body_attr_array(
-                        body, "dof_velocity_gain", 1
-                    )
+                    kwargs["velocityGains"] = body.get_attr_array("dof_velocity_gain", 0)
                 if body.dof_control_mode.ndim == 0:
                     if body.dof_max_force is not None:
                         if body.dof_control_mode not in (
@@ -508,14 +487,14 @@ class Bullet(Simulator):
                                 "For Bullet, 'dof_max_force' can only be set in POSITION_CONTROL "
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
-                        kwargs["forces"] = self._get_body_attr_array(body, "dof_max_force", 1)
+                        kwargs["forces"] = body.get_attr_array("dof_max_force", 0)
                     if body.dof_force is not None:
                         if body.dof_control_mode != DoFControlMode.TORQUE_CONTROL:
                             raise ValueError(
                                 "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
                                 f"mode: '{body.name}'"
                             )
-                        kwargs["forces"] = self._get_body_attr_tensor(body, "dof_force", 1)
+                        kwargs["forces"] = body.get_attr_tensor("dof_force", 0)
                     self._p.setJointMotorControlArray(
                         self._body_ids[body.name],
                         self._dof_indices[body.name],
@@ -532,7 +511,7 @@ class Bullet(Simulator):
                                 "For Bullet, 'dof_max_force' can only be set in POSITION_CONTROL "
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
-                        kwargs["forces"] = self._get_body_attr_array(body, "dof_max_force", 1)
+                        kwargs["forces"] = body.get_attr_array("dof_max_force", 0)
                     if DoFControlMode.POSITION_CONTROL in body.dof_control_mode:
                         self._p.setJointMotorControlArray(
                             self._body_ids[body.name],
@@ -565,7 +544,7 @@ class Bullet(Simulator):
                                 "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
                                 f"mode: '{body.name}'"
                             )
-                        kwargs["forces"] = self._get_body_attr_tensor(body, "dof_force", 1)
+                        kwargs["forces"] = body.get_attr_tensor("dof_force", 0)
                     if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
                         self._p.setJointMotorControlArray(
                             self._body_ids[body.name],
@@ -581,21 +560,17 @@ class Bullet(Simulator):
             else:
                 kwargs = {}
                 if body.dof_target_position is not None:
-                    kwargs["targetPosition"] = self._get_body_attr_tensor(
-                        body, "dof_target_position", 1
-                    )
+                    kwargs["targetPosition"] = body.get_attr_tensor("dof_target_position", 0)
                 if body.dof_target_velocity is not None:
-                    kwargs["targetVelocity"] = self._get_body_attr_tensor(
-                        body, "dof_target_velocity", 1
-                    )
+                    kwargs["targetVelocity"] = body.get_attr_tensor("dof_target_velocity", 0)
                 if body.dof_max_velocity is not None:
                     # For Bullet, 'dof_max_velocity' has no effect when not in the POSITION_CONROL
                     # mode.
-                    kwargs["maxVelocity"] = self._get_body_attr_array(body, "dof_max_velocity", 1)
+                    kwargs["maxVelocity"] = body.get_attr_array("dof_max_velocity", 0)
                 if body.dof_position_gain is not None:
-                    kwargs["positionGain"] = self._get_body_attr_array(body, "dof_position_gain", 1)
+                    kwargs["positionGain"] = body.get_attr_array("dof_position_gain", 0)
                 if body.dof_velocity_gain is not None:
-                    kwargs["velocityGain"] = self._get_body_attr_array(body, "dof_velocity_gain", 1)
+                    kwargs["velocityGain"] = body.get_attr_array("dof_velocity_gain", 0)
                 if body.dof_control_mode.ndim == 0:
                     if body.dof_max_force is not None:
                         if body.dof_control_mode not in (
@@ -606,14 +581,14 @@ class Bullet(Simulator):
                                 "For Bullet, 'dof_max_force' can only be set in POSITION_CONTROL "
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
-                        kwargs["force"] = self._get_body_attr_array(body, "dof_max_force", 1)
+                        kwargs["force"] = body.get_attr_array("dof_max_force", 0)
                     if body.dof_force is not None:
                         if body.dof_control_mode != DoFControlMode.TORQUE_CONTROL:
                             raise ValueError(
                                 "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
                                 f"mode: '{body.name}'"
                             )
-                        kwargs["force"] = self._get_body_attr_tensor(body, "dof_force", 1)
+                        kwargs["force"] = body.get_attr_tensor("dof_force", 0)
                     for i, j in enumerate(self._dof_indices[body.name]):
                         self._p.setJointMotorControl2(
                             self._body_ids[body.name],
@@ -647,11 +622,9 @@ class Bullet(Simulator):
                             if "force" in kwargs:
                                 del kwargs["force"]
                             if body.dof_max_force is not None:
-                                kwargs["force"] = self._get_body_attr_array(
-                                    body, "dof_max_force", 1
-                                )
+                                kwargs["force"] = body.get_attr_array("dof_max_force", 0)
                             if body.dof_force is not None and not np.isnan(
-                                self._get_body_attr_tensor(body, "dof_force", 1)[i]
+                                body.get_attr_tensor("dof_force", 0)[i]
                             ):
                                 raise ValueError(
                                     "For Bullet, 'dof_force' is required to be np.nan for DoF "
@@ -667,9 +640,9 @@ class Bullet(Simulator):
                             if "force" in kwargs:
                                 del kwargs["force"]
                             if body.dof_force is not None:
-                                kwargs["force"] = self._get_body_attr_tensor(body, "dof_force", 1)
+                                kwargs["force"] = body.get_attr_tensor("dof_force", 0)
                             if body.dof_max_force is not None and not np.isnan(
-                                self._get_body_attr_array(body, "dof_max_force", 1)[i]
+                                body.get_attr_array("dof_max_force", 0)[i]
                             ):
                                 raise ValueError(
                                     "For Bullet, 'dof_max_force' is required to be np.nan for DoF "
@@ -687,10 +660,6 @@ class Bullet(Simulator):
         self._collect_state(bodies)
 
         self._contact = None
-
-    def _get_body_attr_tensor(self, body, attr, ndim):
-        """ """
-        return self._get_body_attr_array(body, attr, ndim)
 
     @property
     def contact(self):

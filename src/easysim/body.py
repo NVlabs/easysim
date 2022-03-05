@@ -16,6 +16,15 @@ from contextlib import contextmanager
 class Body:
     """ """
 
+    _ATTR_TENSOR_NDIM = {
+        "initial_base_position": 1,
+        "initial_base_velocity": 1,
+        "initial_dof_position": 1,
+        "initial_dof_velocity": 1,
+        "dof_target_position": 1,
+        "dof_target_velocity": 1,
+        "dof_force": 1,
+    }
     _ATTR_ARRAY_NDIM = {
         "link_color": 2,
         "link_collision_filter": 1,
@@ -190,9 +199,14 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["initial_base_position"],
+                self._ATTR_TENSOR_NDIM["initial_base_position"] + 1,
+            ):
                 raise ValueError(
-                    "'initial_base_position' must have a number of dimensions of 1 or 2"
+                    "'initial_base_position' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['initial_base_position']} or "
+                    f"{self._ATTR_TENSOR_NDIM['initial_base_position'] + 1}"
                 )
             if value.shape[-1] != 7:
                 raise ValueError("'initial_base_position' must have the last dimension of size 7")
@@ -208,9 +222,14 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["initial_base_velocity"],
+                self._ATTR_TENSOR_NDIM["initial_base_velocity"] + 1,
+            ):
                 raise ValueError(
-                    "'initial_base_velocity' must have a number of dimensions of 1 or 2"
+                    "'initial_base_velocity' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['initial_base_velocity']} or "
+                    f"{self._ATTR_TENSOR_NDIM['initial_base_velocity'] + 1}"
                 )
             if value.shape[-1] != 6:
                 raise ValueError("'initial_base_velocity' must have the last dimension of size 6")
@@ -276,9 +295,14 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["initial_dof_position"],
+                self._ATTR_TENSOR_NDIM["initial_dof_position"] + 1,
+            ):
                 raise ValueError(
-                    "'initial_dof_position' must have a number of dimensions of 1 or 2"
+                    "'initial_dof_position' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['initial_dof_position']} or "
+                    f"{self._ATTR_TENSOR_NDIM['initial_dof_position'] + 1}"
                 )
         self._initial_dof_position = value
 
@@ -292,9 +316,14 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["initial_dof_velocity"],
+                self._ATTR_TENSOR_NDIM["initial_dof_velocity"] + 1,
+            ):
                 raise ValueError(
-                    "'initial_dof_velocity' must have a number of dimensions of 1 or 2"
+                    "'initial_dof_velocity' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['initial_dof_velocity']} or "
+                    f"{self._ATTR_TENSOR_NDIM['initial_dof_velocity'] + 1}"
                 )
         self._initial_dof_velocity = value
 
@@ -658,8 +687,15 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_target_position' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["dof_target_position"],
+                self._ATTR_TENSOR_NDIM["dof_target_position"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_target_position' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['dof_target_position']} or "
+                    f"{self._ATTR_TENSOR_NDIM['dof_target_position'] + 1}"
+                )
         self._dof_target_position = value
 
     @property
@@ -672,8 +708,15 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_target_velocity' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["dof_target_velocity"],
+                self._ATTR_TENSOR_NDIM["dof_target_velocity"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_target_velocity' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['dof_target_velocity']} or "
+                    f"{self._ATTR_TENSOR_NDIM['dof_target_velocity'] + 1}"
+                )
         self._dof_target_velocity = value
 
     @property
@@ -686,8 +729,15 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim not in (1, 2):
-                raise ValueError("'dof_force' must have a number of dimensions of 1 or 2")
+            if value.ndim not in (
+                self._ATTR_TENSOR_NDIM["dof_force"],
+                self._ATTR_TENSOR_NDIM["dof_force"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_force' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['dof_force']} or "
+                    f"{self._ATTR_TENSOR_NDIM['dof_force'] + 1}"
+                )
         self._dof_force = value
 
     @property
@@ -745,6 +795,22 @@ class Body:
             if value.ndim != 0:
                 raise ValueError("'contact_id' must have a number of dimensions of 0")
         self._contact_id = value
+
+    def get_attr_array(self, attr, idx):
+        """ """
+        return self._get_attr(attr, self._ATTR_ARRAY_NDIM[attr], idx)
+
+    def get_attr_tensor(self, attr, idx):
+        """ """
+        return self._get_attr(attr, self._ATTR_TENSOR_NDIM[attr], idx)
+
+    def _get_attr(self, attr, ndim, idx):
+        """ """
+        array = getattr(self, attr)
+        if array.ndim == ndim:
+            return array
+        if array.ndim == ndim + 1:
+            return array[idx]
 
     def lock_attr_array(self):
         """ """
