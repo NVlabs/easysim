@@ -34,7 +34,7 @@ class Bullet(Simulator):
         super().__init__(cfg)
 
         if self._cfg.NUM_ENVS != 1:
-            raise ValueError("Number of envs must be 1 for Bullet")
+            raise ValueError("NUM_ENVS must be 1 for Bullet")
 
         self._connected = False
         self._last_frame_time = 0.0
