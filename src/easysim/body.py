@@ -839,16 +839,18 @@ class Body:
                 f"{self._ATTR_ARRAY_NDIM[attr] + 1}) is used"
             )
 
+        env_ids_np = env_ids.cpu().numpy()
+
         with self._make_attr_array_writeable(attr):
-            getattr(self, attr)[env_ids] = value
+            getattr(self, attr)[env_ids_np] = value
 
         if not self._attr_array_dirty_flag[attr]:
             self._attr_array_dirty_flag[attr] = True
         try:
-            self._attr_array_dirty_mask[attr][env_ids] = True
+            self._attr_array_dirty_mask[attr][env_ids_np] = True
         except KeyError:
             self._attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
-            self._attr_array_dirty_mask[attr][env_ids] = True
+            self._attr_array_dirty_mask[attr][env_ids_np] = True
 
     @contextmanager
     def _make_attr_array_writeable(self, attr):
