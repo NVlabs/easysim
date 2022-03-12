@@ -838,6 +838,8 @@ class Body:
                 f"'{attr}' can only be updated when a per-env specification (ndim: "
                 f"{self._ATTR_ARRAY_NDIM[attr] + 1}) is used"
             )
+        if len(env_ids) == 0:
+            return
 
         env_ids_np = env_ids.cpu().numpy()
 
