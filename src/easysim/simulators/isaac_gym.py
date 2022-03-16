@@ -759,7 +759,7 @@ class IsaacGym(Simulator):
                             if body.dof_control_mode[i] == DoFControlMode.POSITION_CONTROL
                         ],
                     ] = body.dof_target_position[
-                        body.dof_control_mode == DoFControlMode.POSITION_CONTROL
+                        ..., body.dof_control_mode == DoFControlMode.POSITION_CONTROL
                     ]
                 if DoFControlMode.VELOCITY_CONTROL in body.dof_control_mode:
                     self._dof_control_buffer[
@@ -772,7 +772,7 @@ class IsaacGym(Simulator):
                             if body.dof_control_mode[i] == DoFControlMode.VELOCITY_CONTROL
                         ],
                     ] = body.dof_target_velocity[
-                        body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL
+                        ..., body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL
                     ]
                 if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
                     self._dof_control_buffer[
@@ -784,7 +784,7 @@ class IsaacGym(Simulator):
                             )
                             if body.dof_control_mode[i] == DoFControlMode.TORQUE_CONTROL
                         ],
-                    ] = body.dof_force[body.dof_control_mode == DoFControlMode.TORQUE_CONTROL]
+                    ] = body.dof_force[..., body.dof_control_mode == DoFControlMode.TORQUE_CONTROL]
 
         if reset_dof_state:
             actor_indices = torch.cat(actor_indices)
