@@ -103,6 +103,14 @@ class Bullet(Simulator):
 
     def _load_body(self, body):
         """ """
+        if body.env_ids_load is not None:
+            if np.array_equal(body.env_ids_load.cpu(), []):
+                return
+            elif not np.array_equal(body.env_ids_load.cpu(), [0]):
+                raise ValueError(
+                    "For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
+                )
+
         kwargs = {}
         if body.use_fixed_base is not None:
             kwargs["useFixedBase"] = body.use_fixed_base
@@ -159,7 +167,7 @@ class Bullet(Simulator):
                 f"'initial_dof_position': '{body.name}'"
             )
 
-        body.contact_id = self._body_ids[body.name]
+        body.contact_id = [self._body_ids[body.name]]
 
     def _reset_dof_state(self, body):
         """ """
@@ -184,6 +192,10 @@ class Bullet(Simulator):
         x = type(body)()
         x.name = body.name
         self._bodies.append(x)
+
+        if body.env_ids_load is not None and len(body.env_ids_load) == 0:
+            body.lock_attr_array()
+            return
 
         if body.dof_control_mode is not None:
             if len(self._dof_indices[body.name]) == 0:
@@ -407,6 +419,18 @@ class Bullet(Simulator):
         ], "Mismatched input and cached bodies"
 
         for body in bodies:
+            for attr in ("dof_armature",):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
+
+            if body.env_ids_load is not None and len(body.env_ids_load) == 0:
+                if body.env_ids_reset_dof_state is not None:
+                    raise ValueError(
+                        "For Bullet, 'env_ids_reset_dof_state' should be None if 'env_ids_load' is "
+                        f"set to []: '{body.name}'"
+                    )
+                continue
+
             set_link_dynamics = False
             for attr in (
                 "link_color",
@@ -439,10 +463,6 @@ class Bullet(Simulator):
                     body.attr_array_dirty_flag[attr] = False
             if set_link_dynamics:
                 self._set_link_dynamics(body)
-
-            for attr in ("dof_armature",):
-                if getattr(body, attr) is not None:
-                    raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
             if len(self._dof_indices[body.name]) == 0:
                 for attr in (

@@ -54,6 +54,7 @@ class Body:
         vhacd_enabled=None,
         vhacd_params=None,
         mesh_normal_mode=None,
+        env_ids_load=None,
         initial_base_position=None,
         initial_base_velocity=None,
         initial_dof_position=None,
@@ -88,6 +89,7 @@ class Body:
         self.vhacd_enabled = vhacd_enabled
         self.vhacd_params = vhacd_params
         self.mesh_normal_mode = mesh_normal_mode
+        self.env_ids_load = env_ids_load
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
         self.initial_dof_position = initial_dof_position
@@ -172,6 +174,9 @@ class Body:
         """ """
         self._device = value
 
+        if hasattr(self, "_env_ids_load") and self.env_ids_load is not None:
+            self.env_ids_load = self.env_ids_load.to(value)
+
         if hasattr(self, "_initial_base_position") and self.initial_base_position is not None:
             self.initial_base_position = self.initial_base_position.to(value)
         if hasattr(self, "_initial_base_velocity") and self.initial_base_velocity is not None:
@@ -195,6 +200,20 @@ class Body:
             self.dof_state = self.dof_state.to(value)
         if hasattr(self, "_link_state") and self.link_state is not None:
             self.link_state = self.link_state.to(value)
+
+    @property
+    def env_ids_load(self):
+        """ """
+        return self._env_ids_load
+
+    @env_ids_load.setter
+    def env_ids_load(self, value):
+        """ """
+        if value is not None:
+            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            if value.ndim != 1:
+                raise ValueError("'env_ids_load' must have a number of dimensions of 1")
+        self._env_ids_load = value
 
     @property
     def initial_base_position(self):
@@ -803,8 +822,8 @@ class Body:
         """ """
         if value is not None:
             value = np.asanyarray(value, dtype=np.int64)
-            if value.ndim != 0:
-                raise ValueError("'contact_id' must have a number of dimensions of 0")
+            if value.ndim != 1:
+                raise ValueError("'contact_id' must have a number of dimensions of 1")
         self._contact_id = value
 
     def get_attr_array(self, attr, idx):

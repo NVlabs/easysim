@@ -155,13 +155,11 @@ class IsaacGym(Simulator):
     def _load_assets(self, bodies):
         """ """
         self._assets = {}
-
-        self._asset_dof_slice = {}
-        self._asset_rigid_body_slice = {}
+        self._asset_num_dofs = {}
+        self._asset_num_rigid_bodies = {}
+        self._asset_num_rigid_shapes = {}
         self._asset_rigid_body_mapping = {-1: [0, 0]}
-        self._asset_rigid_shape_count = {}
 
-        counter_dof = 0
         counter_rigid_body = 0
 
         for b, body in enumerate(bodies):
@@ -203,24 +201,17 @@ class IsaacGym(Simulator):
             self._assets[body.name] = self._gym.load_asset(
                 self._sim, asset_root, asset_file, options=asset_options
             )
-
-            num_dofs = self._gym.get_asset_dof_count(self._assets[body.name])
-            self._asset_dof_slice[body.name] = slice(counter_dof, counter_dof + num_dofs)
-            counter_dof += num_dofs
-
-            num_rigid_bodies = self._gym.get_asset_rigid_body_count(self._assets[body.name])
-            self._asset_rigid_body_slice[body.name] = slice(
-                counter_rigid_body, counter_rigid_body + num_rigid_bodies
+            self._asset_num_dofs[body.name] = self._gym.get_asset_dof_count(self._assets[body.name])
+            self._asset_num_rigid_bodies[body.name] = self._gym.get_asset_rigid_body_count(
+                self._assets[body.name]
             )
-            for i in range(num_rigid_bodies):
-                self._asset_rigid_body_mapping[counter_rigid_body + i] = [b, i]
-            counter_rigid_body += num_rigid_bodies
-
-            self._asset_rigid_shape_count[body.name] = self._gym.get_asset_rigid_shape_count(
+            self._asset_num_rigid_shapes[body.name] = self._gym.get_asset_rigid_shape_count(
                 self._assets[body.name]
             )
 
-            body.contact_id = b
+            for i in range(self._asset_num_rigid_bodies[body.name]):
+                self._asset_rigid_body_mapping[counter_rigid_body + i] = [b, i]
+            counter_rigid_body += self._asset_num_rigid_bodies[body.name]
 
     def _create_envs(self, num_envs, spacing, num_per_row, bodies):
         """ """
@@ -231,11 +222,30 @@ class IsaacGym(Simulator):
 
         self._actor_handles = [{} for _ in range(num_envs)]
         self._actor_indices = [[] for _ in range(num_envs)]
+        self._actor_indices_need_filter = False
+
+        self._actor_root_indices = {body.name: [] for body in bodies}
+        self._dof_indices = {body.name: [] for body in bodies}
+        self._rigid_body_indices = {body.name: [] for body in bodies}
+        counter_actor = 0
+        counter_dof = 0
+        counter_rigid_body = 0
+
+        contact_id = {body.name: [] for body in bodies}
 
         for i in range(num_envs):
             env_ptr = self._gym.create_env(self._sim, lower, upper, num_per_row)
 
+            counter_body = 0
+
             for body in bodies:
+                if body.env_ids_load is not None and i not in body.env_ids_load:
+                    self._actor_indices[i].append(-1)
+                    if not self._actor_indices_need_filter:
+                        self._actor_indices_need_filter = True
+                    contact_id[body.name].append(-2)
+                    continue
+
                 actor_handle = self._gym.create_actor(
                     env_ptr, self._assets[body.name], gymapi.Transform(), name=body.name, group=i
                 )
@@ -243,11 +253,32 @@ class IsaacGym(Simulator):
                 self._actor_handles[i][body.name] = actor_handle
                 self._actor_indices[i].append(actor_index)
 
+                self._actor_root_indices[body.name].append(counter_actor)
+                self._dof_indices[body.name].append(counter_dof)
+                self._rigid_body_indices[body.name].append(counter_rigid_body)
+                counter_actor += 1
+                counter_dof += self._asset_num_dofs[body.name]
+                counter_rigid_body += self._asset_num_rigid_bodies[body.name]
+
+                contact_id[body.name].append(counter_body)
+                counter_body += 1
+
             self._envs.append(env_ptr)
 
         self._actor_indices = torch.tensor(
             self._actor_indices, dtype=torch.int32, device=self._device
         )
+        for body in bodies:
+            self._actor_root_indices[body.name] = torch.tensor(
+                self._actor_root_indices[body.name], dtype=torch.int64, device=self._device
+            )
+            self._dof_indices[body.name] = torch.tensor(
+                self._dof_indices[body.name], dtype=torch.int64, device=self._device
+            )
+            self._rigid_body_indices[body.name] = torch.tensor(
+                self._rigid_body_indices[body.name], dtype=torch.int64, device=self._device
+            )
+            body.contact_id = contact_id[body.name]
 
     def _acquire_physics_state_tensors(self):
         """ """
@@ -307,9 +338,7 @@ class IsaacGym(Simulator):
             self._dof_control_buffer = None
         else:
             self._dof_control_buffer = torch.zeros(
-                (self._num_envs, len(self._dof_state) // self._num_envs),
-                dtype=torch.float32,
-                device=self._device,
+                len(self._dof_state), dtype=torch.float32, device=self._device
             )
 
     def _cache_and_set_props(self, bodies):
@@ -330,12 +359,15 @@ class IsaacGym(Simulator):
                 "dof_armature",
             ):
                 if getattr(body, attr) is not None:
-                    if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
+                    if self._asset_num_dofs[body.name] == 0:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
 
             for idx in range(self._num_envs):
+                if body.env_ids_load is not None and idx not in body.env_ids_load:
+                    continue
+
                 if body.link_color is not None:
                     self._set_link_color(body, idx)
 
@@ -348,7 +380,7 @@ class IsaacGym(Simulator):
                 ):
                     self._set_rigid_shape_props(body, idx)
 
-                if self._get_slice_length(self._asset_dof_slice[body.name]) > 0 and (
+                if self._asset_num_dofs[body.name] > 0 and (
                     body.dof_control_mode is not None
                     or body.dof_max_velocity is not None
                     or body.dof_max_force is not None
@@ -360,21 +392,15 @@ class IsaacGym(Simulator):
 
             body.lock_attr_array()
 
-    def _get_slice_length(self, slice_):
-        """ """
-        return slice_.stop - slice_.start
-
     def _set_link_color(self, body, idx):
         """ """
         link_color = body.get_attr_array("link_color", idx)
-        if len(link_color) != self._get_slice_length(self._asset_rigid_body_slice[body.name]):
+        if len(link_color) != self._asset_num_rigid_bodies[body.name]:
             raise ValueError(
                 f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
-                "number of links "
-                f"({self._get_slice_length(self._asset_rigid_body_slice[body.name])}): "
-                f"'{body.name}'"
+                "number of links ({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
             )
-        for i in range(self._get_slice_length(self._asset_rigid_body_slice[body.name])):
+        for i in range(self._asset_num_rigid_bodies[body.name]):
             self._gym.set_rigid_body_color(
                 self._envs[idx],
                 self._actor_handles[idx][body.name],
@@ -394,12 +420,12 @@ class IsaacGym(Simulator):
         ):
             if (
                 getattr(body, attr) is not None
-                and len(body.get_attr_array(attr, idx)) != self._asset_rigid_shape_count[body.name]
+                and len(body.get_attr_array(attr, idx)) != self._asset_num_rigid_shapes[body.name]
             ):
                 raise ValueError(
                     f"Size of '{attr}' in the link dimension "
                     f"({len(body.get_attr_array(attr, idx))}) should match the number of rigid "
-                    f"shapes ({self._asset_rigid_shape_count[body.name]}): '{body.name}'"
+                    f"shapes ({self._asset_num_rigid_shapes[body.name]}): '{body.name}'"
                 )
         rigid_shape_props = self._gym.get_asset_rigid_shape_properties(self._assets[body.name])
         if body.link_collision_filter is not None:
@@ -467,10 +493,16 @@ class IsaacGym(Simulator):
             self._gym.refresh_dof_state_tensor(self._sim)
             self._dof_state_refreshed = True
 
-        if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
-            body.dof_state = self._dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name]
-            ].clone()
+        if self._asset_num_dofs[body.name] > 0:
+            body.dof_state = torch.as_strided(
+                self._dof_state,
+                (
+                    len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
+                    self._asset_num_dofs[body.name],
+                    2,
+                ),
+                (2, 2, 1),
+            )[self._dof_indices[body.name]].clone()
 
     def _collect_link_state(self, body):
         """ """
@@ -478,9 +510,15 @@ class IsaacGym(Simulator):
             self._gym.refresh_rigid_body_state_tensor(self._sim)
             self._link_state_refreshed = True
 
-        body.link_state = self._rigid_body_state.view(self._num_envs, -1, 13)[
-            :, self._asset_rigid_body_slice[body.name]
-        ].clone()
+        body.link_state = torch.as_strided(
+            self._rigid_body_state,
+            (
+                len(self._rigid_body_state) - self._asset_num_rigid_bodies[body.name] + 1,
+                self._asset_num_rigid_bodies[body.name],
+                13,
+            ),
+            (13, 13, 1),
+        )[self._rigid_body_indices[body.name]].clone()
 
     def _reset_idx(self, bodies, env_ids):
         """ """
@@ -489,25 +527,29 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        for b, body in enumerate(bodies):
+        for body in bodies:
             if body.initial_base_position is None:
-                self._actor_root_state.view(self._num_envs, len(bodies), 13)[
-                    :, b, :7
-                ] = self._initial_actor_root_state.view(self._num_envs, len(bodies), 13)[:, b, :7]
+                initial_base_position = self._initial_actor_root_state[
+                    self._actor_root_indices[body.name], :7
+                ]
             else:
-                self._actor_root_state.view(self._num_envs, len(bodies), 13)[
-                    :, b, :7
-                ] = body.initial_base_position
+                if body.env_ids_load is None or body.initial_base_position.ndim == 1:
+                    initial_base_position = body.initial_base_position
+                else:
+                    initial_base_position = body.initial_base_position[body.env_ids_load]
+            self._actor_root_state[self._actor_root_indices[body.name], :7] = initial_base_position
             if body.initial_base_velocity is None:
-                self._actor_root_state.view(self._num_envs, len(bodies), 13)[
-                    :, b, 7:
-                ] = self._initial_actor_root_state.view(self._num_envs, len(bodies), 13)[:, b, 7:]
+                initial_base_velocity = self._initial_actor_root_state[
+                    self._actor_root_indices[body.name], 7:
+                ]
             else:
-                self._actor_root_state.view(self._num_envs, len(bodies), 13)[
-                    :, b, 7:
-                ] = body.initial_base_velocity
+                if body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
+                    initial_base_velocity = body.initial_base_velocity
+                else:
+                    initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
+            self._actor_root_state[self._actor_root_indices[body.name], 7:] = initial_base_velocity
 
-            if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
+            if self._asset_num_dofs[body.name] == 0:
                 for attr in ("initial_dof_position", "initial_dof_velocity"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
@@ -519,6 +561,8 @@ class IsaacGym(Simulator):
         # Reset base state.
         if self._actor_root_state is not None:
             actor_indices = self._actor_indices[env_ids].view(-1)
+            if self._actor_indices_need_filter:
+                actor_indices = actor_indices[actor_indices != -1]
             self._gym.set_actor_root_state_tensor_indexed(
                 self._sim,
                 gymtorch.unwrap_tensor(self._actor_root_state),
@@ -540,25 +584,49 @@ class IsaacGym(Simulator):
     def _reset_dof_state_buffer(self, body):
         """ """
         if body.initial_dof_position is None:
-            self._dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 0
-            ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 0
-            ]
+            initial_dof_position = torch.as_strided(
+                self._initial_dof_state[:, 0],
+                (
+                    len(self._initial_dof_state) - self._asset_num_dofs[body.name] + 1,
+                    self._asset_num_dofs[body.name],
+                ),
+                (2, 2),
+            )[self._dof_indices[body.name]]
         else:
-            self._dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 0
-            ] = body.initial_dof_position
+            if body.env_ids_load is None or body.initial_dof_position.ndim == 1:
+                initial_dof_position = body.initial_dof_position
+            else:
+                initial_dof_position = body.initial_dof_position[body.env_ids_load]
+        torch.as_strided(
+            self._dof_state[:, 0],
+            (
+                len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
+                self._asset_num_dofs[body.name],
+            ),
+            (2, 2),
+        )[self._dof_indices[body.name]] = initial_dof_position
         if body.initial_dof_velocity is None:
-            self._dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 1
-            ] = self._initial_dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 1
-            ]
+            initial_dof_velocity = torch.as_strided(
+                self._initial_dof_state[:, 1],
+                (
+                    len(self._initial_dof_state) - self._asset_num_dofs[body.name] + 1,
+                    self._asset_num_dofs[body.name],
+                ),
+                (2, 2),
+            )[self._dof_indices[body.name]]
         else:
-            self._dof_state.view(self._num_envs, -1, 2)[
-                :, self._asset_dof_slice[body.name], 1
-            ] = body.initial_dof_velocity
+            if body.env_ids_load is None or body.initial_dof_velocity.ndim == 1:
+                initial_dof_velocity = body.initial_dof_velocity
+            else:
+                initial_dof_velocity = body.initial_dof_velocity[body.env_ids_load]
+        torch.as_strided(
+            self._dof_state[:, 1],
+            (
+                len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
+                self._asset_num_dofs[body.name],
+            ),
+            (2, 2),
+        )[self._dof_indices[body.name]] = initial_dof_velocity
 
     def _check_and_update_props(self, bodies, env_ids=None):
         """ """
@@ -611,7 +679,7 @@ class IsaacGym(Simulator):
                         f"'{body.name}'"
                     )
 
-            if self._get_slice_length(self._asset_dof_slice[body.name]) > 0:
+            if self._asset_num_dofs[body.name] > 0:
                 if body.attr_array_dirty_flag["dof_control_mode"]:
                     raise ValueError(
                         "For Isaac Gym, 'dof_control_mode' cannot be changed after the first "
@@ -679,7 +747,7 @@ class IsaacGym(Simulator):
         actor_indices = []
 
         for b, body in enumerate(bodies):
-            if self._get_slice_length(self._asset_dof_slice[body.name]) == 0:
+            if self._asset_num_dofs[body.name] == 0:
                 for attr in (
                     "dof_target_position",
                     "dof_target_velocity",
@@ -693,6 +761,13 @@ class IsaacGym(Simulator):
                 continue
 
             if body.env_ids_reset_dof_state is not None:
+                if body.env_ids_load is not None and not torch.all(
+                    torch.isin(body.env_ids_reset_dof_state, body.env_ids_load)
+                ):
+                    raise ValueError(
+                        "'env_ids_reset_dof_state' must be a subset of 'env_ids_load' for non-None "
+                        f"'env_ids_load': '{body.name}'"
+                    )
                 self._reset_dof_state_buffer(body)
                 if not reset_dof_state:
                     reset_dof_state = True
@@ -738,53 +813,108 @@ class IsaacGym(Simulator):
                 continue
             if body.dof_control_mode.ndim == 0:
                 if body.dof_control_mode == DoFControlMode.POSITION_CONTROL:
-                    self._dof_control_buffer[
-                        :, self._asset_dof_slice[body.name]
-                    ] = body.dof_target_position
+                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
+                        dof_target_position = body.dof_target_position
+                    else:
+                        dof_target_position = body.dof_target_position[body.env_ids_load]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[self._dof_indices[body.name]] = dof_target_position
                 if body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL:
-                    self._dof_control_buffer[
-                        :, self._asset_dof_slice[body.name]
-                    ] = body.dof_target_velocity
+                    if body.env_ids_load is None or body.dof_target_velocity.ndim == 1:
+                        dof_target_velocity = body.dof_target_velocity
+                    else:
+                        dof_target_velocity = body.dof_target_velocity[body.env_ids_load]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[self._dof_indices[body.name]] = dof_target_velocity
                 if body.dof_control_mode == DoFControlMode.TORQUE_CONTROL:
-                    self._dof_control_buffer[:, self._asset_dof_slice[body.name]] = body.dof_force
+                    if body.env_ids_load is None or body.dof_force.ndim == 1:
+                        dof_force = body.dof_force
+                    else:
+                        dof_force = body.dof_force[body.env_ids_load]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[self._dof_indices[body.name]] = dof_force
             if body.dof_control_mode.ndim == 1:
                 if DoFControlMode.POSITION_CONTROL in body.dof_control_mode:
-                    self._dof_control_buffer[
-                        :,
-                        [
-                            x
-                            for i, x in enumerate(
-                                self._get_slice_range(self._asset_dof_slice[body.name])
-                            )
-                            if body.dof_control_mode[i] == DoFControlMode.POSITION_CONTROL
-                        ],
-                    ] = body.dof_target_position[
-                        ..., body.dof_control_mode == DoFControlMode.POSITION_CONTROL
-                    ]
+                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
+                        dof_target_position = body.dof_target_position[
+                            ..., body.dof_control_mode == DoFControlMode.POSITION_CONTROL
+                        ]
+                    else:
+                        dof_target_position = body.dof_target_position[
+                            body.env_ids_load[:, None],
+                            body.dof_control_mode == DoFControlMode.POSITION_CONTROL,
+                        ]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[
+                        self._dof_indices[body.name][:, None],
+                        body.dof_control_mode == DoFControlMode.POSITION_CONTROL,
+                    ] = dof_target_position
                 if DoFControlMode.VELOCITY_CONTROL in body.dof_control_mode:
-                    self._dof_control_buffer[
-                        :,
-                        [
-                            x
-                            for i, x in enumerate(
-                                self._get_slice_range(self._asset_dof_slice[body.name])
-                            )
-                            if body.dof_control_mode[i] == DoFControlMode.VELOCITY_CONTROL
-                        ],
-                    ] = body.dof_target_velocity[
-                        ..., body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL
+                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
+                        dof_target_velocity = body.dof_target_velocity[
+                            ..., body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL
+                        ]
+                    else:
+                        dof_target_velocity = body.dof_target_velocity[
+                            body.env_ids_load[:, None],
+                            body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
+                        ]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[
+                        self._dof_indices[body.name][:, None],
+                        body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
                     ]
                 if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
-                    self._dof_control_buffer[
-                        :,
-                        [
-                            x
-                            for i, x in enumerate(
-                                self._get_slice_range(self._asset_dof_slice[body.name])
-                            )
-                            if body.dof_control_mode[i] == DoFControlMode.TORQUE_CONTROL
-                        ],
-                    ] = body.dof_force[..., body.dof_control_mode == DoFControlMode.TORQUE_CONTROL]
+                    if body.env_ids_load is None or body.dof_force.ndim == 1:
+                        dof_force = body.dof_force[
+                            ..., body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+                        ]
+                    else:
+                        dof_force = body.dof_force[
+                            body.env_ids_load[:, None],
+                            body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
+                        ]
+                    torch.as_strided(
+                        self._dof_control_buffer,
+                        (
+                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            self._asset_num_dofs[body.name],
+                        ),
+                        (1, 1),
+                    )[
+                        self._dof_indices[body.name][:, None],
+                        body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
+                    ] = dof_force
 
         if reset_dof_state:
             actor_indices = torch.cat(actor_indices)
