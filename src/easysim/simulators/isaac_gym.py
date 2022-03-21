@@ -494,15 +494,29 @@ class IsaacGym(Simulator):
             self._dof_state_refreshed = True
 
         if self._asset_num_dofs[body.name] > 0:
-            body.dof_state = torch.as_strided(
-                self._dof_state,
-                (
-                    len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
-                    self._asset_num_dofs[body.name],
-                    2,
-                ),
-                (2, 2, 1),
-            )[self._dof_indices[body.name]].clone()
+            if body.env_ids_load is None:
+                body.dof_state = torch.as_strided(
+                    self._dof_state,
+                    (
+                        len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                        2,
+                    ),
+                    (2, 2, 1),
+                )[self._dof_indices[body.name]]
+            else:
+                body.dof_state = torch.zeros(
+                    (self._num_envs, self._asset_num_dofs[body.name], 2)
+                ).to(self._dof_state)
+                body.dof_state[body.env_ids_load] = torch.as_strided(
+                    self._dof_state,
+                    (
+                        len(self._dof_state) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                        2,
+                    ),
+                    (2, 2, 1),
+                )[self._dof_indices[body.name]]
 
     def _collect_link_state(self, body):
         """ """
@@ -510,15 +524,29 @@ class IsaacGym(Simulator):
             self._gym.refresh_rigid_body_state_tensor(self._sim)
             self._link_state_refreshed = True
 
-        body.link_state = torch.as_strided(
-            self._rigid_body_state,
-            (
-                len(self._rigid_body_state) - self._asset_num_rigid_bodies[body.name] + 1,
-                self._asset_num_rigid_bodies[body.name],
-                13,
-            ),
-            (13, 13, 1),
-        )[self._rigid_body_indices[body.name]].clone()
+        if body.env_ids_load is None:
+            body.link_state = torch.as_strided(
+                self._rigid_body_state,
+                (
+                    len(self._rigid_body_state) - self._asset_num_rigid_bodies[body.name] + 1,
+                    self._asset_num_rigid_bodies[body.name],
+                    13,
+                ),
+                (13, 13, 1),
+            )[self._rigid_body_indices[body.name]]
+        else:
+            body.link_state = torch.zeros(
+                (self._num_envs, self._asset_num_rigid_bodies[body.name], 13)
+            ).to(self._rigid_body_state)
+            body.link_state[body.env_ids_load] = torch.as_strided(
+                self._rigid_body_state,
+                (
+                    len(self._rigid_body_state) - self._asset_num_rigid_bodies[body.name] + 1,
+                    self._asset_num_rigid_bodies[body.name],
+                    13,
+                ),
+                (13, 13, 1),
+            )[self._rigid_body_indices[body.name]]
 
     def _reset_idx(self, bodies, env_ids):
         """ """
