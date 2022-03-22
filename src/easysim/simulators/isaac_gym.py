@@ -16,7 +16,7 @@ import time
 try:
     from isaacgym import gymapi, gymtorch, gymutil
 except ImportError:
-    # A temporary workaround for requirement of importing `issacgym` before `torch` in
+    # A temporary workaround for requirement of importing `isaacgym` before `torch` in
     # `isaacgym/gymdeps.py`. Remove this exception handler if this requirement has been removed.
     torch_module = sys.modules.pop("torch")
     from isaacgym import gymapi
