@@ -600,6 +600,11 @@ class IsaacGym(Simulator):
 
         # Reset DoF state.
         if self._dof_state is not None:
+            actor_indices = self._actor_indices[
+                env_ids[:, None], [self._asset_num_dofs[body.name] > 0 for body in bodies]
+            ].view(-1)
+            if self._actor_indices_need_filter:
+                actor_indices = actor_indices[actor_indices != -1]
             self._gym.set_dof_state_tensor_indexed(
                 self._sim,
                 gymtorch.unwrap_tensor(self._dof_state),
