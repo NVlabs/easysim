@@ -108,7 +108,7 @@ class Bullet(Simulator):
                 return
             elif not np.array_equal(body.env_ids_load.cpu(), [0]):
                 raise ValueError(
-                    "For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
+                    f"For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
                 )
 
         kwargs = {}

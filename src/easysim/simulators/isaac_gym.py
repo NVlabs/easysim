@@ -398,7 +398,7 @@ class IsaacGym(Simulator):
         if len(link_color) != self._asset_num_rigid_bodies[body.name]:
             raise ValueError(
                 f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
-                "number of links ({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
+                f"number of links ({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
             )
         for i in range(self._asset_num_rigid_bodies[body.name]):
             self._gym.set_rigid_body_color(
