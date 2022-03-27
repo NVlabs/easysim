@@ -413,6 +413,7 @@ class Bullet(Simulator):
                 with self._disable_cov_rendering():
                     self._load_body(body)
                     self._cache_and_set_control_and_props(body)
+                    self._set_callback(body)
 
         assert [body.name for body in bodies] == [
             body.name for body in self._bodies
