@@ -41,6 +41,8 @@ _C.SIM.INIT_VIEWER_CAMERA_POSITION = (None, None, None)
 
 _C.SIM.INIT_VIEWER_CAMERA_TARGET = (None, None, None)
 
+_C.SIM.NUM_ENVS = 1
+
 _C.SIM.SIM_DEVICE = "cpu"
 
 #
@@ -51,11 +53,22 @@ _C.SIM.GRAPHICS_DEVICE_ID = 0
 
 _C.SIM.USE_GPU_PIPELINE = False
 
-_C.SIM.NUM_ENVS = 1
-
 _C.SIM.SPACING = 2.0
 
 _C.SIM.RENDER_FRAME_RATE = 60
+
+# ---------------------------------------------------------------------------- #
+# Isaac Gym PhysX config
+# ---------------------------------------------------------------------------- #
+_C.SIM.PHYSX = CN()
+
+_C.SIM.PHYSX.MAX_DEPENETRATION_VELOCITY = 100.0
+
+# Contact collection mode
+#     0: Don't collect any contacts.
+#     1: Collect contacts for last substep only.
+#     2: Collect contacts for all substeps.
+_C.SIM.PHYSX.CONTACT_COLLECTION = 2
 
 
 cfg = _C

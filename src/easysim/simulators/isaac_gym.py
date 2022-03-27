@@ -92,10 +92,11 @@ class IsaacGym(Simulator):
             sim_params.substeps = cfg.SUBSTEPS
         sim_params.gravity = gymapi.Vec3(*cfg.GRAVITY)
         sim_params.up_axis = gymapi.UP_AXIS_Z
+        sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
 
         sim_params.physx.use_gpu = sim_device_type == "cuda"
-
-        sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
+        sim_params.physx.max_depenetration_velocity = cfg.PHYSX.MAX_DEPENETRATION_VELOCITY
+        sim_params.physx.contact_collection = gymapi.ContactCollection(cfg.PHYSX.CONTACT_COLLECTION)
 
         return sim_params
 
