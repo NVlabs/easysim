@@ -1004,10 +1004,6 @@ class IsaacGym(Simulator):
         self._clear_state(bodies)
         self._contact = None
 
-    def _get_slice_range(self, slice_):
-        """ """
-        return range(slice_.start, slice_.stop)
-
     @property
     def contact(self):
         """ """
