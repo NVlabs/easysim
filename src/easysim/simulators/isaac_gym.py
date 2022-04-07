@@ -444,7 +444,7 @@ class IsaacGym(Simulator):
         if body.link_rolling_friction is not None:
             link_rolling_friction = body.get_attr_array("link_rolling_friction", idx)
             for i, prop in enumerate(rigid_shape_props):
-                prop.rolling_fiction = link_rolling_friction[i]
+                prop.rolling_friction = link_rolling_friction[i]
         if body.link_restitution is not None:
             link_restitution = body.get_attr_array("link_restitution", idx)
             for i, prop in enumerate(rigid_shape_props):
