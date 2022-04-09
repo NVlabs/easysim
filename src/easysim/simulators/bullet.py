@@ -31,6 +31,10 @@ class Bullet(Simulator):
         "link_linear_damping",
         "link_angular_damping",
     )
+    _ATTR_DOF_DYNAMICS = (
+        "dof_lower_limit",
+        "dof_upper_limit",
+    )
     _DOF_CONTROL_MODE_MAP = {
         DoFControlMode.POSITION_CONTROL: pybullet.POSITION_CONTROL,
         DoFControlMode.VELOCITY_CONTROL: pybullet.VELOCITY_CONTROL,
@@ -205,11 +209,16 @@ class Bullet(Simulator):
             body.lock_attr_array()
             return
 
+        for attr in ("dof_has_limits",):
+            if getattr(body, attr) is not None:
+                raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
+
+        if len(self._dof_indices[body.name]) == 0:
+            for attr in ("dof_lower_limit", "dof_upper_limit", "dof_control_mode"):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
+
         if body.dof_control_mode is not None:
-            if len(self._dof_indices[body.name]) == 0:
-                raise ValueError(
-                    f"'dof_control_mode' must be None for body with 0 DoF: '{body.name}'"
-                )
             if (
                 body.dof_control_mode.ndim == 0
                 and body.dof_control_mode
@@ -261,7 +270,7 @@ class Bullet(Simulator):
                         ]
                     ),
                 )
-        elif len(self._dof_indices[body.name]) != 0:
+        elif len(self._dof_indices[body.name]) > 0:
             raise ValueError(
                 f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
             )
@@ -277,6 +286,12 @@ class Bullet(Simulator):
             for x in self._ATTR_LINK_DYNAMICS
         ):
             self._set_link_dynamics(body)
+
+        if len(self._dof_indices[body.name]) > 0 and any(
+            not body.attr_array_default_flag[x] and getattr(body, x) is not None
+            for x in self._ATTR_DOF_DYNAMICS
+        ):
+            self._set_dof_dynamics(body)
 
         if body.link_color is None:
             visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
@@ -305,9 +320,27 @@ class Bullet(Simulator):
                 body.link_restitution = [[x[5] for x in dynamics_info]]
                 body.attr_array_default_flag["link_restitution"] = True
 
+        if len(self._dof_indices[body.name]) > 0 and any(
+            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS
+        ):
+            joint_info = [
+                self._p.getJointInfo(self._body_ids[body.name], j)
+                for j in self._dof_indices[body.name]
+            ]
+            if body.dof_lower_limit is None:
+                body.dof_lower_limit = [[x[8] for x in joint_info]]
+                body.attr_array_default_flag["dof_lower_limit"] = True
+            if body.dof_upper_limit is None:
+                body.dof_upper_limit = [[x[9] for x in joint_info]]
+                body.attr_array_default_flag["dof_upper_limit"] = True
+
         body.lock_attr_array()
 
-        for attr in ("link_color", "link_collision_filter") + self._ATTR_LINK_DYNAMICS:
+        for attr in (
+            ("link_color", "link_collision_filter")
+            + self._ATTR_LINK_DYNAMICS
+            + self._ATTR_DOF_DYNAMICS
+        ):
             if body.attr_array_dirty_flag[attr]:
                 body.attr_array_dirty_flag[attr] = False
 
@@ -417,6 +450,40 @@ class Bullet(Simulator):
                 self._body_ids[body.name], -1, **{k: v for k, v in kwargs.items()}
             )
 
+    def _set_dof_dynamics(self, body, dirty_only=False):
+        """ """
+        for attr in self._ATTR_DOF_DYNAMICS:
+            if (
+                not body.attr_array_locked[attr]
+                and getattr(body, attr) is not None
+                and len(body.get_attr_array(attr, 0)) != len(self._dof_indices[body.name])
+            ):
+                raise ValueError(
+                    f"Size of '{attr}' in the DoF dimension ({len(body.get_attr_array(attr, 0))}) "
+                    f"should match the number of DoFs ({len(self._dof_indices[body.name])}): "
+                    f"'{body.name}'"
+                )
+        kwargs = {}
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["dof_lower_limit"]
+            and body.dof_lower_limit is not None
+            or body.attr_array_dirty_flag["dof_lower_limit"]
+        ):
+            kwargs["jointLowerLimit"] = body.get_attr_array("dof_lower_limit", 0)
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["dof_upper_limit"]
+            and body.dof_upper_limit is not None
+            or body.attr_array_dirty_flag["dof_upper_limit"]
+        ):
+            kwargs["jointUpperLimit"] = body.get_attr_array("dof_upper_limit", 0)
+        if len(kwargs) > 0:
+            for i, j in enumerate(self._dof_indices[body.name]):
+                self._p.changeDynamics(
+                    self._body_ids[body.name], j, **{k: v[i] for k, v in kwargs.items()}
+                )
+
     def _set_callback(self, body):
         """ """
         body.set_callback_collect_dof_state(self._collect_dof_state)
@@ -491,7 +558,10 @@ class Bullet(Simulator):
         ], "Mismatched input and cached bodies"
 
         for body in bodies:
-            for attr in ("dof_armature",):
+            for attr in (
+                "dof_has_limits",
+                "dof_armature",
+            ):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
@@ -517,6 +587,8 @@ class Bullet(Simulator):
 
             if len(self._dof_indices[body.name]) == 0:
                 for attr in (
+                    "dof_lower_limit",
+                    "dof_upper_limit",
                     "dof_control_mode",
                     "dof_max_force",
                     "dof_max_velocity",
@@ -532,15 +604,21 @@ class Bullet(Simulator):
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
-            else:
-                if body.env_ids_reset_dof_state is not None:
-                    if not np.array_equal(body.env_ids_reset_dof_state.cpu(), [0]):
-                        raise ValueError(
-                            "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
-                            f"'{body.name}'"
-                        )
-                    self._reset_dof_state(body)
-                    body.env_ids_reset_dof_state = None
+
+            if body.env_ids_reset_dof_state is not None:
+                if not np.array_equal(body.env_ids_reset_dof_state.cpu(), [0]):
+                    raise ValueError(
+                        "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
+                        f"'{body.name}'"
+                    )
+                self._reset_dof_state(body)
+                body.env_ids_reset_dof_state = None
+
+            if any(body.attr_array_dirty_flag[x] for x in self._ATTR_DOF_DYNAMICS):
+                self._set_dof_dynamics(body, dirty_only=True)
+                for attr in self._ATTR_DOF_DYNAMICS:
+                    if body.attr_array_dirty_flag[attr]:
+                        body.attr_array_dirty_flag[attr] = False
 
             if body.attr_array_dirty_flag["dof_control_mode"]:
                 raise ValueError(

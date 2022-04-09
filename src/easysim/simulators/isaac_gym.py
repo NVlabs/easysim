@@ -40,6 +40,9 @@ class IsaacGym(Simulator):
         "link_restitution",
     )
     _ATTR_DOF_PROPS = (
+        "dof_has_limits",
+        "dof_lower_limit",
+        "dof_upper_limit",
         "dof_control_mode",
         "dof_max_force",
         "dof_max_velocity",
@@ -445,6 +448,12 @@ class IsaacGym(Simulator):
                 getattr(body, x) is None for x in self._ATTR_DOF_PROPS
             ):
                 dof_props = self._gym.get_asset_dof_properties(self._assets[body.name])
+                if body.dof_has_limits is None:
+                    body.dof_has_limits = np.tile(dof_props["hasLimits"], (self._num_envs, 1))
+                if body.dof_lower_limit is None:
+                    body.dof_lower_limit = np.tile(dof_props["lower"], (self._num_envs, 1))
+                if body.dof_upper_limit is None:
+                    body.dof_upper_limit = np.tile(dof_props["upper"], (self._num_envs, 1))
                 if body.dof_control_mode is None:
                     body.dof_control_mode = [
                         k
@@ -548,6 +557,24 @@ class IsaacGym(Simulator):
         dof_props = self._gym.get_actor_dof_properties(
             self._envs[idx], self._actor_handles[idx][body.name]
         )
+        if (
+            not body.attr_array_locked["dof_has_limits"]
+            and body.dof_has_limits is not None
+            or body.attr_array_dirty_flag["dof_has_limits"]
+        ):
+            dof_props["hasLimits"] = body.get_attr_array("dof_has_limits", idx)
+        if (
+            not body.attr_array_locked["dof_lower_limit"]
+            and body.dof_lower_limit is not None
+            or body.attr_array_dirty_flag["dof_lower_limit"]
+        ):
+            dof_props["lower"] = body.get_attr_array("dof_lower_limit", idx)
+        if (
+            not body.attr_array_locked["dof_upper_limit"]
+            and body.dof_upper_limit is not None
+            or body.attr_array_dirty_flag["dof_upper_limit"]
+        ):
+            dof_props["upper"] = body.get_attr_array("dof_upper_limit", idx)
         if set_drive_mode:
             if body.dof_control_mode is not None:
                 if body.dof_control_mode.ndim == 0:

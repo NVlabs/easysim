@@ -34,6 +34,9 @@ class Body:
         "link_restitution": 1,
         "link_linear_damping": 0,
         "link_angular_damping": 0,
+        "dof_has_limits": 1,
+        "dof_lower_limit": 1,
+        "dof_upper_limit": 1,
         "dof_control_mode": 0,
         "dof_max_force": 1,
         "dof_max_velocity": 1,
@@ -67,6 +70,9 @@ class Body:
         link_restitution=None,
         link_linear_damping=None,
         link_angular_damping=None,
+        dof_has_limits=None,
+        dof_lower_limit=None,
+        dof_upper_limit=None,
         dof_control_mode=None,
         dof_max_force=None,
         dof_max_velocity=None,
@@ -104,6 +110,9 @@ class Body:
         self.link_linear_damping = link_linear_damping
         self.link_angular_damping = link_angular_damping
 
+        self.dof_has_limits = dof_has_limits
+        self.dof_lower_limit = dof_lower_limit
+        self.dof_upper_limit = dof_upper_limit
         self.dof_control_mode = dof_control_mode
         self.dof_max_force = dof_max_force
         self.dof_max_velocity = dof_max_velocity
@@ -574,6 +583,81 @@ class Body:
                     f"{self._ATTR_ARRAY_NDIM['link_angular_damping'] + 1}"
                 )
         self._link_angular_damping = value
+
+    @property
+    def dof_has_limits(self):
+        """ """
+        return self._dof_has_limits
+
+    @dof_has_limits.setter
+    def dof_has_limits(self, value):
+        """ """
+        assert not self._attr_array_locked["dof_has_limits"], (
+            "'dof_has_limits' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.bool_)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_has_limits"],
+                self._ATTR_ARRAY_NDIM["dof_has_limits"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_has_limits' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_has_limits']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_has_limits'] + 1}"
+                )
+        self._dof_has_limits = value
+
+    @property
+    def dof_lower_limit(self):
+        """ """
+        return self._dof_lower_limit
+
+    @dof_lower_limit.setter
+    def dof_lower_limit(self, value):
+        """ """
+        assert not self._attr_array_locked["dof_lower_limit"], (
+            "'dof_lower_limit' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_lower_limit"],
+                self._ATTR_ARRAY_NDIM["dof_lower_limit"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_lower_limit' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_lower_limit']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_lower_limit'] + 1}"
+                )
+        self._dof_lower_limit = value
+
+    @property
+    def dof_upper_limit(self):
+        """ """
+        return self._dof_upper_limit
+
+    @dof_upper_limit.setter
+    def dof_upper_limit(self, value):
+        """ """
+        assert not self._attr_array_locked["dof_upper_limit"], (
+            "'dof_upper_limit' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_upper_limit"],
+                self._ATTR_ARRAY_NDIM["dof_upper_limit"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_upper_limit' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_upper_limit']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_upper_limit'] + 1}"
+                )
+        self._dof_upper_limit = value
 
     @property
     def dof_control_mode(self):
