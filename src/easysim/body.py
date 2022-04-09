@@ -135,9 +135,31 @@ class Body:
         self._attr_array_locked = {}
         self._attr_array_dirty_flag = {}
         self._attr_array_dirty_mask = {}
+        self._attr_array_default_flag = {}
         for attr in self._ATTR_ARRAY_NDIM:
             self._attr_array_locked[attr] = False
             self._attr_array_dirty_flag[attr] = False
+            self._attr_array_default_flag[attr] = False
+
+    @property
+    def attr_array_locked(self):
+        """ """
+        return self._attr_array_locked
+
+    @property
+    def attr_array_dirty_flag(self):
+        """ """
+        return self._attr_array_dirty_flag
+
+    @property
+    def attr_array_dirty_mask(self):
+        """ """
+        return self._attr_array_dirty_mask
+
+    @property
+    def attr_array_default_flag(self):
+        """ """
+        return self._attr_array_default_flag
 
     def _init_callback(self):
         """ """
@@ -873,6 +895,9 @@ class Body:
             self._attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
             self._attr_array_dirty_mask[attr][env_ids_np] = True
 
+        if self._attr_array_default_flag[attr]:
+            self._attr_array_default_flag[attr] = False
+
     @contextmanager
     def _make_attr_array_writeable(self, attr):
         """ """
@@ -881,16 +906,6 @@ class Body:
             yield
         finally:
             getattr(self, attr).flags.writeable = False
-
-    @property
-    def attr_array_dirty_flag(self):
-        """ """
-        return self._attr_array_dirty_flag
-
-    @property
-    def attr_array_dirty_mask(self):
-        """ """
-        return self._attr_array_dirty_mask
 
     def set_callback_collect_dof_state(self, callback):
         """ """

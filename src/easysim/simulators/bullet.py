@@ -23,6 +23,14 @@ from easysim.contact import create_contact_array
 class Bullet(Simulator):
     """Bullet simulator."""
 
+    _ATTR_LINK_DYNAMICS = (
+        "link_lateral_friction",
+        "link_spinning_friction",
+        "link_rolling_friction",
+        "link_restitution",
+        "link_linear_damping",
+        "link_angular_damping",
+    )
     _DOF_CONTROL_MODE_MAP = {
         DoFControlMode.POSITION_CONTROL: pybullet.POSITION_CONTROL,
         DoFControlMode.VELOCITY_CONTROL: pybullet.VELOCITY_CONTROL,
@@ -258,26 +266,58 @@ class Bullet(Simulator):
                 f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
             )
 
-        if body.link_color is not None:
+        if not body.attr_array_default_flag["link_color"] and body.link_color is not None:
             self._set_link_color(body)
+
         if body.link_collision_filter is not None:
             self._set_link_collision_filter(body)
-        if (
-            body.link_lateral_friction is not None
-            or body.link_spinning_friction is not None
-            or body.link_rolling_friction is not None
-            or body.link_restitution is not None
-            or body.link_linear_damping is not None
-            or body.link_angular_damping is not None
+
+        if any(
+            not body.attr_array_default_flag[x] and getattr(body, x) is not None
+            for x in self._ATTR_LINK_DYNAMICS
         ):
             self._set_link_dynamics(body)
 
+        if body.link_color is None:
+            visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
+            body.link_color = [[x[7] for x in visual_data]]
+            body.attr_array_default_flag["link_color"] = True
+
+        if any(
+            getattr(body, x) is None
+            for x in self._ATTR_LINK_DYNAMICS
+            if x not in ("link_linear_damping", "link_angular_damping")
+        ):
+            dynamics_info = [
+                self._p.getDynamicsInfo(self._body_ids[body.name], i)
+                for i in range(-1, self._num_links[body.name] - 1)
+            ]
+            if body.link_lateral_friction is None:
+                body.link_lateral_friction = [[x[1] for x in dynamics_info]]
+                body.attr_array_default_flag["link_lateral_friction"] = True
+            if body.link_spinning_friction is None:
+                body.link_spinning_friction = [[x[7] for x in dynamics_info]]
+                body.attr_array_default_flag["link_spinning_friction"] = True
+            if body.link_rolling_friction is None:
+                body.link_rolling_friction = [[x[6] for x in dynamics_info]]
+                body.attr_array_default_flag["link_rolling_friction"] = True
+            if body.link_restitution is None:
+                body.link_restitution = [[x[5] for x in dynamics_info]]
+                body.attr_array_default_flag["link_restitution"] = True
+
         body.lock_attr_array()
+
+        for attr in ("link_color", "link_collision_filter") + self._ATTR_LINK_DYNAMICS:
+            if body.attr_array_dirty_flag[attr]:
+                body.attr_array_dirty_flag[attr] = False
 
     def _set_link_color(self, body):
         """ """
         link_color = body.get_attr_array("link_color", 0)
-        if len(link_color) != self._num_links[body.name]:
+        if (
+            not body.attr_array_locked["link_color"]
+            and len(link_color) != self._num_links[body.name]
+        ):
             raise ValueError(
                 f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
                 f"number of links: '{body.name}' ({self._num_links[body.name]})"
@@ -288,7 +328,10 @@ class Bullet(Simulator):
     def _set_link_collision_filter(self, body):
         """ """
         link_collision_filter = body.get_attr_array("link_collision_filter", 0)
-        if len(link_collision_filter) != self._num_links[body.name]:
+        if (
+            not body.attr_array_locked["link_collision_filter"]
+            and len(link_collision_filter) != self._num_links[body.name]
+        ):
             raise ValueError(
                 "Size of 'link_collision_filter' in the link dimension "
                 f"({len(link_collision_filter)}) should match the number of links "
@@ -302,16 +345,14 @@ class Bullet(Simulator):
                 link_collision_filter[i + 1],
             )
 
-    def _set_link_dynamics(self, body):
+    def _set_link_dynamics(self, body, dirty_only=False):
         """ """
-        for attr in (
-            "link_lateral_friction",
-            "link_spinning_friction",
-            "link_rolling_friction",
-            "link_restitution",
-        ):
+        for attr in self._ATTR_LINK_DYNAMICS:
+            if attr in ("link_linear_damping", "link_angular_damping"):
+                continue
             if (
-                getattr(body, attr) is not None
+                not body.attr_array_locked[attr]
+                and getattr(body, attr) is not None
                 and len(body.get_attr_array(attr, 0)) != self._num_links[body.name]
             ):
                 raise ValueError(
@@ -320,13 +361,33 @@ class Bullet(Simulator):
                     f"'{body.name}'"
                 )
         kwargs = {}
-        if body.link_lateral_friction is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_lateral_friction"]
+            and body.link_lateral_friction is not None
+            or body.attr_array_dirty_flag["link_lateral_friction"]
+        ):
             kwargs["lateralFriction"] = body.get_attr_array("link_lateral_friction", 0)
-        if body.link_spinning_friction is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_spinning_friction"]
+            and body.link_spinning_friction is not None
+            or body.attr_array_dirty_flag["link_spinning_friction"]
+        ):
             kwargs["spinningFriction"] = body.get_attr_array("link_spinning_friction", 0)
-        if body.link_rolling_friction is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_rolling_friction"]
+            and body.link_rolling_friction is not None
+            or body.attr_array_dirty_flag["link_rolling_friction"]
+        ):
             kwargs["rollingFriction"] = body.get_attr_array("link_rolling_friction", 0)
-        if body.link_restitution is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_restitution"]
+            and body.link_restitution is not None
+            or body.attr_array_dirty_flag["link_restitution"]
+        ):
             kwargs["restitution"] = body.get_attr_array("link_restitution", 0)
         if len(kwargs) > 0:
             for i in range(-1, self._num_links[body.name] - 1):
@@ -337,9 +398,19 @@ class Bullet(Simulator):
         #     https://github.com/bulletphysics/bullet3/blob/740d2b978352b16943b24594572586d95d476466/examples/SharedMemory/PhysicsClientC_API.cpp#L3419
         #     https://github.com/bulletphysics/bullet3/blob/740d2b978352b16943b24594572586d95d476466/examples/SharedMemory/PhysicsClientC_API.cpp#L3430
         kwargs = {}
-        if body.link_linear_damping is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_linear_damping"]
+            and body.link_linear_damping is not None
+            or body.attr_array_dirty_flag["link_linear_damping"]
+        ):
             kwargs["linearDamping"] = body.get_attr_array("link_linear_damping", 0)
-        if body.link_angular_damping is not None:
+        if (
+            not dirty_only
+            and not body.attr_array_default_flag["link_angular_damping"]
+            and body.link_angular_damping is not None
+            or body.attr_array_dirty_flag["link_angular_damping"]
+        ):
             kwargs["angularDamping"] = body.get_attr_array("link_angular_damping", 0)
         if len(kwargs) > 0:
             self._p.changeDynamics(
@@ -432,38 +503,17 @@ class Bullet(Simulator):
                     )
                 continue
 
-            set_link_dynamics = False
-            for attr in (
-                "link_color",
-                "link_collision_filter",
-                "link_lateral_friction",
-                "link_spinning_friction",
-                "link_rolling_friction",
-                "link_restitution",
-                "link_linear_damping",
-                "link_angular_damping",
-            ):
-                if body.attr_array_dirty_flag[attr]:
-                    if attr == "link_color":
-                        self._set_link_color(body)
-                    if attr == "link_collision_filter":
-                        self._set_link_collision_filter(body)
-                    if (
-                        attr
-                        in (
-                            "link_lateral_friction",
-                            "link_spinning_friction",
-                            "link_rolling_friction",
-                            "link_restitution",
-                            "link_linear_damping",
-                            "link_angular_damping",
-                        )
-                        and not set_link_dynamics
-                    ):
-                        set_link_dynamics = True
-                    body.attr_array_dirty_flag[attr] = False
-            if set_link_dynamics:
-                self._set_link_dynamics(body)
+            if body.attr_array_dirty_flag["link_color"]:
+                self._set_link_color(body)
+                body.attr_array_dirty_flag["link_color"] = False
+            if body.attr_array_dirty_flag["link_collision_filter"]:
+                self._set_link_collision_filter(body)
+                body.attr_array_dirty_flag["link_collision_filter"] = False
+            if any(body.attr_array_dirty_flag[x] for x in self._ATTR_LINK_DYNAMICS):
+                self._set_link_dynamics(body, dirty_only=True)
+                for attr in self._ATTR_LINK_DYNAMICS:
+                    if body.attr_array_dirty_flag[attr]:
+                        body.attr_array_dirty_flag[attr] = False
 
             if len(self._dof_indices[body.name]) == 0:
                 for attr in (
