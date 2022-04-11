@@ -507,7 +507,9 @@ class IsaacGym(Simulator):
                     f"({len(body.get_attr_array(attr, idx))}) should match the number of rigid "
                     f"shapes ({self._asset_num_rigid_shapes[body.name]}): '{body.name}'"
                 )
-        rigid_shape_props = self._gym.get_asset_rigid_shape_properties(self._assets[body.name])
+        rigid_shape_props = self._gym.get_actor_rigid_shape_properties(
+            self._envs[idx], self._actor_handles[idx][body.name]
+        )
         if (
             not body.attr_array_locked["link_collision_filter"]
             and body.link_collision_filter is not None
