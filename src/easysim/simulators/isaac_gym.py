@@ -1053,7 +1053,7 @@ class IsaacGym(Simulator):
                     )[
                         self._dof_indices[body.name][:, None],
                         body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
-                    ]
+                    ] = dof_target_velocity
                 if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
                     if body.env_ids_load is None or body.dof_force.ndim == 1:
                         dof_force = body.dof_force[
