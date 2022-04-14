@@ -354,9 +354,17 @@ class IsaacGym(Simulator):
     def _allocate_buffers(self):
         """ """
         if self._dof_state is None:
-            self._dof_control_buffer = None
+            self._dof_position_target_buffer = None
+            self._dof_velocity_target_buffer = None
+            self._dof_actuation_force_buffer = None
         else:
-            self._dof_control_buffer = torch.zeros(
+            self._dof_position_target_buffer = torch.zeros(
+                len(self._dof_state), dtype=torch.float32, device=self._device
+            )
+            self._dof_velocity_target_buffer = torch.zeros(
+                len(self._dof_state), dtype=torch.float32, device=self._device
+            )
+            self._dof_actuation_force_buffer = torch.zeros(
                 len(self._dof_state), dtype=torch.float32, device=self._device
             )
 
@@ -978,9 +986,11 @@ class IsaacGym(Simulator):
                     else:
                         dof_target_position = body.dof_target_position[body.env_ids_load]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_position_target_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_position_target_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -991,9 +1001,11 @@ class IsaacGym(Simulator):
                     else:
                         dof_target_velocity = body.dof_target_velocity[body.env_ids_load]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_velocity_target_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_velocity_target_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -1004,9 +1016,11 @@ class IsaacGym(Simulator):
                     else:
                         dof_force = body.dof_force[body.env_ids_load]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_actuation_force_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_actuation_force_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -1023,9 +1037,11 @@ class IsaacGym(Simulator):
                             body.dof_control_mode == DoFControlMode.POSITION_CONTROL,
                         ]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_position_target_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_position_target_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -1044,9 +1060,11 @@ class IsaacGym(Simulator):
                             body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
                         ]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_velocity_target_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_velocity_target_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -1065,9 +1083,11 @@ class IsaacGym(Simulator):
                             body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
                         ]
                     torch.as_strided(
-                        self._dof_control_buffer,
+                        self._dof_actuation_force_buffer,
                         (
-                            len(self._dof_control_buffer) - self._asset_num_dofs[body.name] + 1,
+                            len(self._dof_actuation_force_buffer)
+                            - self._asset_num_dofs[body.name]
+                            + 1,
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
@@ -1085,15 +1105,15 @@ class IsaacGym(Simulator):
                 len(actor_indices),
             )
 
-        if self._dof_control_buffer is not None:
+        if self._dof_state is not None:
             self._gym.set_dof_position_target_tensor(
-                self._sim, gymtorch.unwrap_tensor(self._dof_control_buffer)
+                self._sim, gymtorch.unwrap_tensor(self._dof_position_target_buffer)
             )
             self._gym.set_dof_velocity_target_tensor(
-                self._sim, gymtorch.unwrap_tensor(self._dof_control_buffer)
+                self._sim, gymtorch.unwrap_tensor(self._dof_velocity_target_buffer)
             )
             self._gym.set_dof_actuation_force_tensor(
-                self._sim, gymtorch.unwrap_tensor(self._dof_control_buffer)
+                self._sim, gymtorch.unwrap_tensor(self._dof_actuation_force_buffer)
             )
 
         self._gym.simulate(self._sim)
