@@ -2,4 +2,4 @@
 #
 # Licensed under the MIT License [see LICENSE for details].
 
-"""easysim test package."""
+"""EasySim test package."""

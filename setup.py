@@ -2,7 +2,7 @@
 #
 # Licensed under the MIT License [see LICENSE for details].
 
-"""easysim package setuptools."""
+"""EasySim package setuptools."""
 
 # NOTE (roflaherty): This file is still needed to allow the package to be
 # installed in editable mode.

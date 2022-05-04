@@ -2,7 +2,7 @@
 #
 # Licensed under the MIT License [see LICENSE for details].
 
-"""easysim package."""
+"""EasySim package."""
 
 
 # NOTE (roflaherty): This is inspired by how matplotlib does creates its version value.

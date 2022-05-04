@@ -1,4 +1,4 @@
-# easysim
+# EasySim
 
 ## Prerequisites
 
