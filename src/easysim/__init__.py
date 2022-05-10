@@ -47,7 +47,7 @@ __version__ = _get_version()
 # Remove `_get_version` so it is not added as an attribute
 del _get_version
 
-from easysim.simulator_env import SimulatorEnv
+from easysim.simulator_env import SimulatorEnv, SimulatorWrapper
 from easysim.body import Body
 from easysim.constants import DoFControlMode, MeshNormalMode
 from easysim.config import cfg, get_cfg
@@ -55,6 +55,7 @@ from easysim.cmd import get_config_from_args
 
 __all__ = [
     "SimulatorEnv",
+    "SimulatorWrapper",
     "Body",
     "DoFControlMode",
     "MeshNormalMode",

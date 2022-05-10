@@ -80,3 +80,19 @@ class SimulatorEnv(gym.Env, abc.ABC):
     def close(self):
         """ """
         self._simulator.close()
+
+
+class SimulatorWrapper(gym.Wrapper):
+    """ """
+
+    def reset(self, env_ids=None, **kwargs):
+        """ """
+        return self.env.reset(env_ids=env_ids, **kwargs)
+
+    def step(self, action):
+        """ """
+        return self.env.step(action)
+
+    def close(self):
+        """ """
+        return self.env.close()
