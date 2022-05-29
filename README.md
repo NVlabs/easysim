@@ -11,7 +11,7 @@ For good practice for Python package management, it is recommended to install th
 First clone the repo and install with `pip`'s editable mode.
 
 ```Shell
-git clone ssh://git@gitlab-master.nvidia.com:12051/ychao/easysim.git
+git clone git@github.com:NVlabs/easysim.git
 cd easysim
 pip install -e .[dev]
 ```
