@@ -13,3 +13,4 @@
 global-include py.typed
 
 # graft <path to additional files or directories to add to the project>
+prune tests
