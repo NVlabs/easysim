@@ -831,8 +831,8 @@ class IsaacGym(Simulator):
                             np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
                         ):
                             raise ValueError(
-                                f"For Isaac Gym, to change '{attr}' for some env also requires the env "
-                                f"indices to be in `env_ids`: '{body.name}'"
+                                f"For Isaac Gym, to change '{attr}' for some env also requires the"
+                                f" env indices to be in `env_ids`: '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
                 env_ids_masked = np.nonzero(mask)[0]
@@ -870,8 +870,8 @@ class IsaacGym(Simulator):
                                 )
                             ):
                                 raise ValueError(
-                                    f"For Isaac Gym, to change '{attr}' for certain env also requires "
-                                    f"the env index to be in `env_ids`: '{body.name}'"
+                                    f"For Isaac Gym, to change '{attr}' for certain env also"
+                                    f" requires the env index to be in `env_ids`: '{body.name}'"
                                 )
                             mask |= body.attr_array_dirty_mask[attr]
                     env_ids_masked = np.nonzero(mask)[0]
