@@ -98,11 +98,11 @@ class Bullet(Simulator):
         """ """
         try:
             if self._cfg.RENDER:
-                self._p.configureDebugVisualizer(self._p.COV_ENABLE_RENDERING, 0)
+                self._p.configureDebugVisualizer(pybullet.COV_ENABLE_RENDERING, 0)
             yield
         finally:
             if self._cfg.RENDER:
-                self._p.configureDebugVisualizer(self._p.COV_ENABLE_RENDERING, 1)
+                self._p.configureDebugVisualizer(pybullet.COV_ENABLE_RENDERING, 1)
 
     def _load_ground_plane(self):
         """ """
@@ -122,7 +122,7 @@ class Bullet(Simulator):
         if body.use_fixed_base is not None:
             kwargs["useFixedBase"] = body.use_fixed_base
         if body.use_self_collision is not None and body.use_self_collision:
-            kwargs["flags"] = self._p.URDF_USE_SELF_COLLISION
+            kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         for attr in ("vhacd_enabled", "vhacd_params", "mesh_normal_mode"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
@@ -131,7 +131,7 @@ class Bullet(Simulator):
         dof_indices = []
         for j in range(self._p.getNumJoints(self._body_ids[body.name])):
             joint_info = self._p.getJointInfo(self._body_ids[body.name], j)
-            if joint_info[2] != self._p.JOINT_FIXED:
+            if joint_info[2] != pybullet.JOINT_FIXED:
                 dof_indices.append(j)
         self._dof_indices[body.name] = np.asanyarray(dof_indices, dtype=np.int64)
 
@@ -245,7 +245,7 @@ class Bullet(Simulator):
                 self._p.setJointMotorControlArray(
                     self._body_ids[body.name],
                     self._dof_indices[body.name],
-                    self._p.VELOCITY_CONTROL,
+                    pybullet.VELOCITY_CONTROL,
                     forces=[0] * len(self._dof_indices[body.name]),
                 )
             if (
@@ -257,7 +257,7 @@ class Bullet(Simulator):
                     self._dof_indices[body.name][
                         body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
                     ],
-                    self._p.VELOCITY_CONTROL,
+                    pybullet.VELOCITY_CONTROL,
                     forces=[0]
                     * len(
                         self._dof_indices[body.name][
