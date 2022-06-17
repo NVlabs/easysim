@@ -48,6 +48,7 @@ class Body:
         geometry_type=None,
         urdf_file=None,
         sphere_radius=None,
+        box_half_extent=None,
         device=None,
         use_fixed_base=None,
         use_self_collision=None,
@@ -88,6 +89,7 @@ class Body:
         self.geometry_type = geometry_type
         self.urdf_file = urdf_file
         self.sphere_radius = sphere_radius
+        self.box_half_extent = box_half_extent
         self.device = device
         self.use_fixed_base = use_fixed_base
         self.use_self_collision = use_self_collision
@@ -213,6 +215,16 @@ class Body:
     def sphere_radius(self, value):
         """ """
         self._sphere_radius = value
+
+    @property
+    def box_half_extent(self):
+        """ """
+        return self._box_half_extent
+
+    @box_half_extent.setter
+    def box_half_extent(self, value):
+        """ """
+        self._box_half_extent = value
 
     @property
     def device(self):

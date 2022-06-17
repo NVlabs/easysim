@@ -8,6 +8,7 @@ class GeometryType:
 
     URDF = 0
     SPHERE = 1
+    BOX = 2
 
 
 class DoFControlMode:

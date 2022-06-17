@@ -126,12 +126,12 @@ class Bullet(Simulator):
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         if body.geometry_type is None:
             raise ValueError(f"For Bullet, 'geometry_type' must not be None: '{body.name}'")
-        if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE):
+        if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE, GeometryType.BOX):
             raise ValueError(
-                f"For Bullet, 'geometry_type' only supports URDF and SPHERE: '{body.name}'"
+                f"For Bullet, 'geometry_type' only supports URDF, SPHERE, and BOX: '{body.name}'"
             )
         if body.geometry_type == GeometryType.URDF:
-            for attr in ("sphere_radius",):
+            for attr in ("sphere_radius", "box_half_extent"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for geometry type URDF: '{body.name}'")
             if body.use_fixed_base is not None:
@@ -141,7 +141,7 @@ class Bullet(Simulator):
             kwargs_visual = {}
             kwargs_collision = {}
             if body.geometry_type == GeometryType.SPHERE:
-                for attr in ("urdf_file",):
+                for attr in ("urdf_file", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for geometry type SPHERE: '{body.name}'"
@@ -154,6 +154,21 @@ class Bullet(Simulator):
                 )
                 kwargs["baseCollisionShapeIndex"] = self._p.createCollisionShape(
                     pybullet.GEOM_SPHERE, **kwargs_collision
+                )
+            if body.geometry_type == GeometryType.BOX:
+                for attr in ("urdf_file", "sphere_radius"):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for geometry type BOX: '{body.name}'"
+                        )
+                if body.box_half_extent is not None:
+                    kwargs_visual["halfExtents"] = body.box_half_extent
+                    kwargs_collision["halfExtents"] = body.box_half_extent
+                kwargs["baseVisualShapeIndex"] = self._p.createVisualShape(
+                    pybullet.GEOM_BOX, **kwargs_visual
+                )
+                kwargs["baseCollisionShapeIndex"] = self._p.createCollisionShape(
+                    pybullet.GEOM_BOX, **kwargs_collision
                 )
             if body.use_fixed_base is not None and body.use_fixed_base:
                 kwargs["baseMass"] = 0.0

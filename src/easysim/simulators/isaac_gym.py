@@ -212,12 +212,12 @@ class IsaacGym(Simulator):
 
             if body.geometry_type is None:
                 raise ValueError(f"For Isaac Gym, 'geometry_type' must not be None: '{body.name}'")
-            if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE):
+            if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE, GeometryType.BOX):
                 raise ValueError(
                     f"For Isaac Gym, 'geometry_type' only supports URDF and SPHERE: '{body.name}'"
                 )
             if body.geometry_type == GeometryType.URDF:
-                for attr in ("sphere_radius",):
+                for attr in ("sphere_radius", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for geometry type URDF: '{body.name}'"
@@ -227,7 +227,7 @@ class IsaacGym(Simulator):
                     self._sim, asset_root, asset_file, options=asset_options
                 )
             if body.geometry_type == GeometryType.SPHERE:
-                for attr in ("urdf_file",):
+                for attr in ("urdf_file", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for geometry type SPHERE: '{body.name}'"
@@ -239,6 +239,20 @@ class IsaacGym(Simulator):
                     )
                 self._assets[body.name] = self._gym.create_sphere(
                     self._sim, body.sphere_radius, options=asset_options
+                )
+            if body.geometry_type == GeometryType.BOX:
+                for attr in ("urdf_file", "sphere_radius"):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for geometry type BOX: '{body.name}'"
+                        )
+                if body.box_half_extent is None:
+                    raise ValueError(
+                        "For Isaac Gym, 'box_half_extent' must not be None if 'geometry_type' is "
+                        f"set to BOX: '{body.name}'"
+                    )
+                self._assets[body.name] = self._gym.create_box(
+                    self._sim, *[x * 2 for x in body.box_half_extent], options=asset_options
                 )
 
             self._asset_num_dofs[body.name] = self._gym.get_asset_dof_count(self._assets[body.name])
