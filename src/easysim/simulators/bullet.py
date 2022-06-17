@@ -546,8 +546,13 @@ class Bullet(Simulator):
         link_state = [pos + orn + lin + ang]
         if self._num_links[body.name] > 1:
             link_indices = [*range(0, self._num_links[body.name] - 1)]
+            # Need to set computeForwardKinematics=1. See:
+            #     https://github.com/bulletphysics/bullet3/issues/2806
             link_states = self._p.getLinkStates(
-                self._body_ids[body.name], link_indices, computeLinkVelocity=1
+                self._body_ids[body.name],
+                link_indices,
+                computeLinkVelocity=1,
+                computeForwardKinematics=1,
             )
             link_state += [x[4] + x[5] + x[6] + x[7] for x in link_states]
         body.link_state = [link_state]
