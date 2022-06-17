@@ -11,7 +11,7 @@ import time
 from contextlib import contextmanager
 
 from easysim.simulators.simulator import Simulator
-from easysim.constants import DoFControlMode
+from easysim.constants import GeometryType, DoFControlMode
 from easysim.contact import create_contact_array
 
 
@@ -118,15 +118,46 @@ class Bullet(Simulator):
                     f"For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
                 )
 
-        kwargs = {}
-        if body.use_fixed_base is not None:
-            kwargs["useFixedBase"] = body.use_fixed_base
-        if body.use_self_collision is not None and body.use_self_collision:
-            kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         for attr in ("vhacd_enabled", "vhacd_params", "mesh_normal_mode"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
-        self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)
+        kwargs = {}
+        if body.use_self_collision is not None and body.use_self_collision:
+            kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
+        if body.geometry_type is None:
+            raise ValueError(f"For Bullet, 'geometry_type' must not be None: '{body.name}'")
+        if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE):
+            raise ValueError(
+                f"For Bullet, 'geometry_type' only supports URDF and SPHERE: '{body.name}'"
+            )
+        if body.geometry_type == GeometryType.URDF:
+            for attr in ("sphere_radius",):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' must be None for geometry type URDF: '{body.name}'")
+            if body.use_fixed_base is not None:
+                kwargs["useFixedBase"] = body.use_fixed_base
+            self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)
+        else:
+            kwargs_visual = {}
+            kwargs_collision = {}
+            if body.geometry_type == GeometryType.SPHERE:
+                for attr in ("urdf_file",):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for geometry type SPHERE: '{body.name}'"
+                        )
+                if body.sphere_radius is not None:
+                    kwargs_visual["radius"] = body.sphere_radius
+                    kwargs_collision["radius"] = body.sphere_radius
+                kwargs["baseVisualShapeIndex"] = self._p.createVisualShape(
+                    pybullet.GEOM_SPHERE, **kwargs_visual
+                )
+                kwargs["baseCollisionShapeIndex"] = self._p.createCollisionShape(
+                    pybullet.GEOM_SPHERE, **kwargs_collision
+                )
+            if body.use_fixed_base is not None and body.use_fixed_base:
+                kwargs["baseMass"] = 0.0
+            self._body_ids[body.name] = self._p.createMultiBody(**kwargs)
 
         dof_indices = []
         for j in range(self._p.getNumJoints(self._body_ids[body.name])):
@@ -234,8 +265,8 @@ class Bullet(Simulator):
                 )
             ):
                 raise ValueError(
-                    "Bullet only supports POSITION_CONTROL, VELOCITY_CONTROL, and TORQUE_CONTROL "
-                    f"modes: '{body.name}'"
+                    "For Bullet, 'dof_control_mode' only supports POSITION_CONTROL, "
+                    f"VELOCITY_CONTROL, and TORQUE_CONTROL: '{body.name}'"
                 )
 
             if (

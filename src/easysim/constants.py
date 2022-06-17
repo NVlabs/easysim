@@ -2,8 +2,17 @@
 #
 # Licensed under the MIT License [see LICENSE for details].
 
+
+class GeometryType:
+    """ """
+
+    URDF = 0
+    SPHERE = 1
+
+
 class DoFControlMode:
     """ """
+
     NONE = 0
     POSITION_CONTROL = 1
     VELOCITY_CONTROL = 2
@@ -12,6 +21,7 @@ class DoFControlMode:
 
 class MeshNormalMode:
     """ """
+
     FROM_ASSET = 0
     COMPUTE_PER_VERTEX = 1
     COMPUTE_PER_FACE = 2

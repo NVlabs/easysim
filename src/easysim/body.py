@@ -45,7 +45,9 @@ class Body:
     def __init__(
         self,
         name=None,
+        geometry_type=None,
         urdf_file=None,
+        sphere_radius=None,
         device=None,
         use_fixed_base=None,
         use_self_collision=None,
@@ -83,7 +85,9 @@ class Body:
         self._init_callback()
 
         self.name = name
+        self.geometry_type = geometry_type
         self.urdf_file = urdf_file
+        self.sphere_radius = sphere_radius
         self.device = device
         self.use_fixed_base = use_fixed_base
         self.use_self_collision = use_self_collision
@@ -181,6 +185,16 @@ class Body:
         self._name = value
 
     @property
+    def geometry_type(self):
+        """ """
+        return self._geometry_type
+
+    @geometry_type.setter
+    def geometry_type(self, value):
+        """ """
+        self._geometry_type = value
+
+    @property
     def urdf_file(self):
         """ """
         return self._urdf_file
@@ -189,6 +203,16 @@ class Body:
     def urdf_file(self, value):
         """ """
         self._urdf_file = value
+
+    @property
+    def sphere_radius(self):
+        """ """
+        return self._sphere_radius
+
+    @sphere_radius.setter
+    def sphere_radius(self, value):
+        """ """
+        self._sphere_radius = value
 
     @property
     def device(self):

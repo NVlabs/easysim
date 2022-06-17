@@ -20,7 +20,7 @@ except ImportError:
     from isaacgym import gymtorch, gymutil
 
 from easysim.simulators.simulator import Simulator
-from easysim.constants import DoFControlMode, MeshNormalMode
+from easysim.constants import GeometryType, DoFControlMode, MeshNormalMode
 from easysim.contact import create_contact_array
 
 
@@ -177,8 +177,6 @@ class IsaacGym(Simulator):
         counter_rigid_body = 0
 
         for b, body in enumerate(bodies):
-            asset_root, asset_file = os.path.split(body.urdf_file)
-
             asset_options = gymapi.AssetOptions()
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
@@ -212,9 +210,37 @@ class IsaacGym(Simulator):
             if body.mesh_normal_mode is not None:
                 asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[body.mesh_normal_mode]
 
-            self._assets[body.name] = self._gym.load_asset(
-                self._sim, asset_root, asset_file, options=asset_options
-            )
+            if body.geometry_type is None:
+                raise ValueError(f"For Isaac Gym, 'geometry_type' must not be None: '{body.name}'")
+            if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE):
+                raise ValueError(
+                    f"For Isaac Gym, 'geometry_type' only supports URDF and SPHERE: '{body.name}'"
+                )
+            if body.geometry_type == GeometryType.URDF:
+                for attr in ("sphere_radius",):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for geometry type URDF: '{body.name}'"
+                        )
+                asset_root, asset_file = os.path.split(body.urdf_file)
+                self._assets[body.name] = self._gym.load_asset(
+                    self._sim, asset_root, asset_file, options=asset_options
+                )
+            if body.geometry_type == GeometryType.SPHERE:
+                for attr in ("urdf_file",):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"'{attr}' must be None for geometry type SPHERE: '{body.name}'"
+                        )
+                if body.sphere_radius is None:
+                    raise ValueError(
+                        "For Isaac Gym, 'sphere_radius' must not be None if 'geometry_type' is set "
+                        f"to SPHERE: '{body.name}'"
+                    )
+                self._assets[body.name] = self._gym.create_sphere(
+                    self._sim, body.sphere_radius, options=asset_options
+                )
+
             self._asset_num_dofs[body.name] = self._gym.get_asset_dof_count(self._assets[body.name])
             self._asset_num_rigid_bodies[body.name] = self._gym.get_asset_rigid_body_count(
                 self._assets[body.name]
@@ -831,8 +857,8 @@ class IsaacGym(Simulator):
                             np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
                         ):
                             raise ValueError(
-                                f"For Isaac Gym, to change '{attr}' for some env also requires the"
-                                f" env indices to be in `env_ids`: '{body.name}'"
+                                f"For Isaac Gym, to change '{attr}' for some env also requires the "
+                                f"env indices to be in `env_ids`: '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
                 env_ids_masked = np.nonzero(mask)[0]
@@ -870,8 +896,8 @@ class IsaacGym(Simulator):
                                 )
                             ):
                                 raise ValueError(
-                                    f"For Isaac Gym, to change '{attr}' for certain env also"
-                                    f" requires the env index to be in `env_ids`: '{body.name}'"
+                                    f"For Isaac Gym, to change '{attr}' for certain env also "
+                                    f"requires the env index to be in `env_ids`: '{body.name}'"
                                 )
                             mask |= body.attr_array_dirty_mask[attr]
                     env_ids_masked = np.nonzero(mask)[0]
