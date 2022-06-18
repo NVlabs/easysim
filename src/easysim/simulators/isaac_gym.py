@@ -739,26 +739,7 @@ class IsaacGym(Simulator):
             )
 
         for body in bodies:
-            if body.initial_base_position is None:
-                initial_base_position = self._initial_actor_root_state[
-                    self._actor_root_indices[body.name], :7
-                ]
-            else:
-                if body.env_ids_load is None or body.initial_base_position.ndim == 1:
-                    initial_base_position = body.initial_base_position
-                else:
-                    initial_base_position = body.initial_base_position[body.env_ids_load]
-            self._actor_root_state[self._actor_root_indices[body.name], :7] = initial_base_position
-            if body.initial_base_velocity is None:
-                initial_base_velocity = self._initial_actor_root_state[
-                    self._actor_root_indices[body.name], 7:
-                ]
-            else:
-                if body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
-                    initial_base_velocity = body.initial_base_velocity
-                else:
-                    initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
-            self._actor_root_state[self._actor_root_indices[body.name], 7:] = initial_base_velocity
+            self._reset_base_state_buffer(body)
 
             if self._asset_num_dofs[body.name] == 0:
                 for attr in ("initial_dof_position", "initial_dof_velocity"):
@@ -796,6 +777,29 @@ class IsaacGym(Simulator):
             )
 
         self._check_and_update_props(bodies, env_ids=env_ids)
+
+    def _reset_base_state_buffer(self, body):
+        """ """
+        if body.initial_base_position is None:
+            initial_base_position = self._initial_actor_root_state[
+                self._actor_root_indices[body.name], :7
+            ]
+        else:
+            if body.env_ids_load is None or body.initial_base_position.ndim == 1:
+                initial_base_position = body.initial_base_position
+            else:
+                initial_base_position = body.initial_base_position[body.env_ids_load]
+        self._actor_root_state[self._actor_root_indices[body.name], :7] = initial_base_position
+        if body.initial_base_velocity is None:
+            initial_base_velocity = self._initial_actor_root_state[
+                self._actor_root_indices[body.name], 7:
+            ]
+        else:
+            if body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
+                initial_base_velocity = body.initial_base_velocity
+            else:
+                initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
+        self._actor_root_state[self._actor_root_indices[body.name], 7:] = initial_base_velocity
 
     def _reset_dof_state_buffer(self, body):
         """ """
@@ -946,10 +950,26 @@ class IsaacGym(Simulator):
 
         self._check_and_update_props(bodies)
 
+        reset_base_state = False
         reset_dof_state = False
-        actor_indices = []
+        actor_indices_base = []
+        actor_indices_dof = []
 
         for b, body in enumerate(bodies):
+            if body.env_ids_reset_base_state is not None:
+                if body.env_ids_load is not None and not torch.all(
+                    torch.isin(body.env_ids_reset_base_state, body.env_ids_load)
+                ):
+                    raise ValueError(
+                        "'env_ids_reset_base_state' must be a subset of 'env_ids_load' for "
+                        f"non-None 'env_ids_load': '{body.name}'"
+                    )
+                self._reset_base_state_buffer(body)
+                if not reset_base_state:
+                    reset_base_state = True
+                actor_indices_base.append(self._actor_indices[body.env_ids_reset_base_state, b])
+                body.env_ids_reset_base_state = None
+
             if self._asset_num_dofs[body.name] == 0:
                 for attr in (
                     "dof_target_position",
@@ -974,7 +994,7 @@ class IsaacGym(Simulator):
                 self._reset_dof_state_buffer(body)
                 if not reset_dof_state:
                     reset_dof_state = True
-                actor_indices.append(self._actor_indices[body.env_ids_reset_dof_state, b])
+                actor_indices_dof.append(self._actor_indices[body.env_ids_reset_dof_state, b])
                 body.env_ids_reset_dof_state = None
 
             if body.dof_target_position is not None and (
@@ -1131,8 +1151,17 @@ class IsaacGym(Simulator):
                         body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
                     ] = dof_force
 
+        if reset_base_state:
+            actor_indices = torch.cat(actor_indices_base)
+            self._gym.set_actor_root_state_tensor_indexed(
+                self._sim,
+                gymtorch.unwrap_tensor(self._actor_root_state),
+                gymtorch.unwrap_tensor(actor_indices),
+                len(actor_indices),
+            )
+
         if reset_dof_state:
-            actor_indices = torch.cat(actor_indices)
+            actor_indices = torch.cat(actor_indices_dof)
             self._gym.set_dof_state_tensor_indexed(
                 self._sim,
                 gymtorch.unwrap_tensor(self._dof_state),

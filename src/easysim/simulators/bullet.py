@@ -185,27 +185,9 @@ class Bullet(Simulator):
 
         # Reset base state.
         if body.initial_base_position is not None:
-            if body.initial_base_position.ndim == 1:
-                self._p.resetBasePositionAndOrientation(
-                    self._body_ids[body.name],
-                    body.initial_base_position[:3],
-                    body.initial_base_position[3:],
-                )
-            if body.initial_base_position.ndim == 2:
-                self._p.resetBasePositionAndOrientation(
-                    self._body_ids[body.name],
-                    body.initial_base_position[0, :3],
-                    body.initial_base_position[0, 3:],
-                )
+            self._reset_base_position(body)
         if body.initial_base_velocity is not None:
-            kwargs = {}
-            if body.initial_base_velocity.ndim == 1:
-                kwargs["linearVelocity"] = body.initial_base_velocity[:3]
-                kwargs["angularVelocity"] = body.initial_base_velocity[3:]
-            if body.initial_base_velocity.ndim == 2:
-                kwargs["linearVelocity"] = body.initial_base_velocity[0, :3]
-                kwargs["angularVelocity"] = body.initial_base_velocity[0, 3:]
-            self._p.resetBaseVelocity(self._body_ids[body.name], **kwargs)
+            self._reset_base_velocity(body)
 
         # Reset DoF state.
         if len(self._dof_indices[body.name]) == 0:
@@ -221,6 +203,32 @@ class Bullet(Simulator):
             )
 
         body.contact_id = [self._body_ids[body.name]]
+
+    def _reset_base_position(self, body):
+        """ """
+        if body.initial_base_position.ndim == 1:
+            self._p.resetBasePositionAndOrientation(
+                self._body_ids[body.name],
+                body.initial_base_position[:3],
+                body.initial_base_position[3:],
+            )
+        if body.initial_base_position.ndim == 2:
+            self._p.resetBasePositionAndOrientation(
+                self._body_ids[body.name],
+                body.initial_base_position[0, :3],
+                body.initial_base_position[0, 3:],
+            )
+
+    def _reset_base_velocity(self, body):
+        """ """
+        kwargs = {}
+        if body.initial_base_velocity.ndim == 1:
+            kwargs["linearVelocity"] = body.initial_base_velocity[:3]
+            kwargs["angularVelocity"] = body.initial_base_velocity[3:]
+        if body.initial_base_velocity.ndim == 2:
+            kwargs["linearVelocity"] = body.initial_base_velocity[0, :3]
+            kwargs["angularVelocity"] = body.initial_base_velocity[0, 3:]
+        self._p.resetBaseVelocity(self._body_ids[body.name], **kwargs)
 
     def _reset_dof_state(self, body):
         """ """
@@ -612,12 +620,30 @@ class Bullet(Simulator):
                     raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
             if body.env_ids_load is not None and len(body.env_ids_load) == 0:
-                if body.env_ids_reset_dof_state is not None:
-                    raise ValueError(
-                        "For Bullet, 'env_ids_reset_dof_state' should be None if 'env_ids_load' is "
-                        f"set to []: '{body.name}'"
-                    )
+                for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
+                    if getattr(body, attr) is not None:
+                        raise ValueError(
+                            f"For Bullet, '{attr}' should be None if 'env_ids_load' is set to []: "
+                            f"'{body.name}'"
+                        )
                 continue
+
+            if body.env_ids_reset_base_state is not None:
+                if not np.array_equal(body.env_ids_reset_base_state.cpu(), [0]):
+                    raise ValueError(
+                        "For Bullet, 'env_ids_reset_base_state' must be either None or [0]: "
+                        f"'{body.name}'"
+                    )
+                if body.initial_base_position is None and body.initial_base_velocity is None:
+                    raise ValueError(
+                        "'initial_base_position' and 'initial_base_velocity' cannot be both None "
+                        f"when 'env_ids_reset_base_state' is used: {body.name}"
+                    )
+                if body.initial_base_position is not None:
+                    self._reset_base_position(body)
+                if body.initial_base_velocity is not None:
+                    self._reset_base_velocity(body)
+                body.env_ids_reset_base_state = None
 
             if body.attr_array_dirty_flag["link_color"]:
                 self._set_link_color(body)

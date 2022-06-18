@@ -125,6 +125,7 @@ class Body:
         self.dof_target_velocity = dof_target_velocity
         self.dof_force = dof_force
 
+        self.env_ids_reset_base_state = None
         self.env_ids_reset_dof_state = None
 
         self.dof_state = None
@@ -902,6 +903,20 @@ class Body:
                     f"{self._ATTR_TENSOR_NDIM['dof_force'] + 1}"
                 )
         self._dof_force = value
+
+    @property
+    def env_ids_reset_base_state(self):
+        """ """
+        return self._env_ids_reset_base_state
+
+    @env_ids_reset_base_state.setter
+    def env_ids_reset_base_state(self, value):
+        """ """
+        if value is not None:
+            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            if value.ndim != 1:
+                raise ValueError("'env_ids_reset_base_state' must have a number of dimensions of 1")
+        self._env_ids_reset_base_state = value
 
     @property
     def env_ids_reset_dof_state(self):
