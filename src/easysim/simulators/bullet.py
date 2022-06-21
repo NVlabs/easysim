@@ -42,6 +42,8 @@ class Bullet(Simulator):
 
         if self._cfg.NUM_ENVS != 1:
             raise ValueError("NUM_ENVS must be 1 for Bullet")
+        if self._cfg.SIM_DEVICE != "cpu":
+            raise ValueError("SIM_DEVICE must be 'cpu' for Bullet")
 
         self._connected = False
         self._last_frame_time = 0.0

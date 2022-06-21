@@ -69,15 +69,15 @@ class IsaacGym(Simulator):
             self._sim_device_id = 0
 
         self._device = "cpu"
-        if self._cfg.USE_GPU_PIPELINE:
+        if self._cfg.ISAAC_GYM.USE_GPU_PIPELINE:
             if sim_device_type == "cuda":
                 self._device = "cuda:" + str(self._sim_device_id)
             else:
                 print("GPU pipeline can only be used with GPU simulation. Forcing CPU pipeline.")
-                self._cfg.USE_GPU_PIPELINE = False
+                self._cfg.ISAAC_GYM.USE_GPU_PIPELINE = False
 
-        if not self._cfg.RENDER and self._cfg.GRAPHICS_DEVICE_ID != -1:
-            self._cfg.GRAPHICS_DEVICE_ID = -1
+        if not self._cfg.RENDER and self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1:
+            self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID = -1
 
         # Support only PhysX for now.
         self._physics_engine = gymapi.SIM_PHYSX
@@ -90,7 +90,9 @@ class IsaacGym(Simulator):
         self._created = False
         self._last_render_time = 0.0
         self._counter_render = 0
-        self._render_time_step = max(1.0 / self._cfg.RENDER_FRAME_RATE, self._cfg.TIME_STEP)
+        self._render_time_step = max(
+            1.0 / self._cfg.ISAAC_GYM.RENDER_FRAME_RATE, self._cfg.TIME_STEP
+        )
         self._render_steps = self._render_time_step / self._cfg.TIME_STEP
 
     def _parse_sim_params(self, cfg, sim_device_type):
@@ -105,11 +107,13 @@ class IsaacGym(Simulator):
             sim_params.substeps = cfg.SUBSTEPS
         sim_params.gravity = gymapi.Vec3(*cfg.GRAVITY)
         sim_params.up_axis = gymapi.UP_AXIS_Z
-        sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
+        sim_params.use_gpu_pipeline = cfg.ISAAC_GYM.USE_GPU_PIPELINE
 
         sim_params.physx.use_gpu = sim_device_type == "cuda"
-        sim_params.physx.max_depenetration_velocity = cfg.PHYSX.MAX_DEPENETRATION_VELOCITY
-        sim_params.physx.contact_collection = gymapi.ContactCollection(cfg.PHYSX.CONTACT_COLLECTION)
+        sim_params.physx.max_depenetration_velocity = cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
+        sim_params.physx.contact_collection = gymapi.ContactCollection(
+            cfg.ISAAC_GYM.PHYSX.CONTACT_COLLECTION
+        )
 
         return sim_params
 
@@ -118,7 +122,7 @@ class IsaacGym(Simulator):
         if not self._created:
             self._sim = self._create_sim(
                 self._sim_device_id,
-                self._cfg.GRAPHICS_DEVICE_ID,
+                self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID,
                 self._physics_engine,
                 self._sim_params,
             )
@@ -126,7 +130,7 @@ class IsaacGym(Simulator):
             self._load_ground_plane()
             self._load_assets(bodies)
             self._create_envs(
-                self._num_envs, self._cfg.SPACING, int(np.sqrt(self._num_envs)), bodies
+                self._num_envs, self._cfg.ISAAC_GYM.SPACING, int(np.sqrt(self._num_envs)), bodies
             )
             self._cache_and_set_props(bodies)
             self._set_callback(bodies)
@@ -436,7 +440,7 @@ class IsaacGym(Simulator):
 
             if body.link_color is None:
                 # Avoid error from `get_rigid_body_color()` when `graphics_device` is set to -1.
-                if self._cfg.GRAPHICS_DEVICE_ID == -1:
+                if self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID == -1:
                     body.link_color = [
                         [[1.0, 1.0, 1.0]] * self._asset_num_rigid_bodies[body.name]
                     ] * self._num_envs

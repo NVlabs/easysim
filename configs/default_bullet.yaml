@@ -1,6 +1,0 @@
-SIM:
-  SIMULATOR: bullet
-  RENDER: False
-  GRAVITY: (0.0, 0.0, -9.8)
-  USE_DEFAULT_STEP_PARAMS: True
-  SIM_DEVICE: cpu

@@ -40,30 +40,31 @@ _C.SIM.NUM_ENVS = 1
 
 _C.SIM.SIM_DEVICE = "cpu"
 
-#
-# Isaac Gym specific config
-#
+# ---------------------------------------------------------------------------- #
+# Isaac Gym config
+# ---------------------------------------------------------------------------- #
+_C.SIM.ISAAC_GYM = CN()
 
-_C.SIM.GRAPHICS_DEVICE_ID = 0
+_C.SIM.ISAAC_GYM.GRAPHICS_DEVICE_ID = 0
 
-_C.SIM.USE_GPU_PIPELINE = False
+_C.SIM.ISAAC_GYM.USE_GPU_PIPELINE = False
 
-_C.SIM.SPACING = 2.0
+_C.SIM.ISAAC_GYM.SPACING = 2.0
 
-_C.SIM.RENDER_FRAME_RATE = 60
+_C.SIM.ISAAC_GYM.RENDER_FRAME_RATE = 60
 
 # ---------------------------------------------------------------------------- #
 # Isaac Gym PhysX config
 # ---------------------------------------------------------------------------- #
-_C.SIM.PHYSX = CN()
+_C.SIM.ISAAC_GYM.PHYSX = CN()
 
-_C.SIM.PHYSX.MAX_DEPENETRATION_VELOCITY = 100.0
+_C.SIM.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY = 100.0
 
 # Contact collection mode
 #     0: Don't collect any contacts.
 #     1: Collect contacts for last substep only.
 #     2: Collect contacts for all substeps.
-_C.SIM.PHYSX.CONTACT_COLLECTION = 2
+_C.SIM.ISAAC_GYM.PHYSX.CONTACT_COLLECTION = 2
 
 
 cfg = _C
