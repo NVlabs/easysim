@@ -71,7 +71,8 @@ class Bullet(Simulator):
                 )
             self._p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
 
-            self._body_id_ground_plane = self._load_ground_plane()
+            if self._cfg.GROUND_PLANE.LOAD:
+                self._body_id_ground_plane = self._load_ground_plane()
 
             self._body_ids = {}
             self._dof_indices = {}
@@ -108,7 +109,9 @@ class Bullet(Simulator):
 
     def _load_ground_plane(self):
         """ """
-        return self._p.loadURDF("plane_implicit.urdf")
+        kwargs = {}
+        kwargs["basePosition"] = (0.0, 0.0, -self._cfg.GROUND_PLANE.DISTANCE)
+        return self._p.loadURDF("plane_implicit.urdf", **kwargs)
 
     def _load_body(self, body):
         """ """

@@ -127,7 +127,8 @@ class IsaacGym(Simulator):
                 self._sim_params,
             )
 
-            self._load_ground_plane()
+            if self._cfg.GROUND_PLANE.LOAD:
+                self._load_ground_plane()
             self._load_assets(bodies)
             self._create_envs(
                 self._num_envs, self._cfg.ISAAC_GYM.SPACING, int(np.sqrt(self._num_envs)), bodies
@@ -168,6 +169,7 @@ class IsaacGym(Simulator):
         """ """
         plane_params = gymapi.PlaneParams()
         plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
+        plane_params.distance = self._cfg.GROUND_PLANE.DISTANCE
         self._gym.add_ground(self._sim, plane_params)
 
     def _load_assets(self, bodies):
