@@ -265,6 +265,56 @@ class Body:
             self.link_state = self.link_state.to(value)
 
     @property
+    def use_fixed_base(self):
+        """ """
+        return self._use_fixed_base
+
+    @use_fixed_base.setter
+    def use_fixed_base(self, value):
+        """ """
+        self._use_fixed_base = value
+
+    @property
+    def use_self_collision(self):
+        """ """
+        return self._use_self_collision
+
+    @use_self_collision.setter
+    def use_self_collision(self, value):
+        """ """
+        self._use_self_collision = value
+
+    @property
+    def vhacd_enabled(self):
+        """ """
+        return self._vhacd_enabled
+
+    @vhacd_enabled.setter
+    def vhacd_enabled(self, value):
+        """ """
+        self._vhacd_enabled = value
+
+    @property
+    def vhacd_params(self):
+        """ """
+        return self._vhacd_params
+
+    @vhacd_params.setter
+    def vhacd_params(self, value):
+        """ """
+        self._vhacd_params = value
+
+    @property
+    def mesh_normal_mode(self):
+        """ """
+        return self._mesh_normal_mode
+
+    @mesh_normal_mode.setter
+    def mesh_normal_mode(self, value):
+        """ """
+        self._mesh_normal_mode = value
+
+    @property
     def env_ids_load(self):
         """ """
         return self._env_ids_load
@@ -323,56 +373,6 @@ class Body:
             if value.shape[-1] != 6:
                 raise ValueError("'initial_base_velocity' must have the last dimension of size 6")
         self._initial_base_velocity = value
-
-    @property
-    def use_fixed_base(self):
-        """ """
-        return self._use_fixed_base
-
-    @use_fixed_base.setter
-    def use_fixed_base(self, value):
-        """ """
-        self._use_fixed_base = value
-
-    @property
-    def use_self_collision(self):
-        """ """
-        return self._use_self_collision
-
-    @use_self_collision.setter
-    def use_self_collision(self, value):
-        """ """
-        self._use_self_collision = value
-
-    @property
-    def vhacd_enabled(self):
-        """ """
-        return self._vhacd_enabled
-
-    @vhacd_enabled.setter
-    def vhacd_enabled(self, value):
-        """ """
-        self._vhacd_enabled = value
-
-    @property
-    def vhacd_params(self):
-        """ """
-        return self._vhacd_params
-
-    @vhacd_params.setter
-    def vhacd_params(self, value):
-        """ """
-        self._vhacd_params = value
-
-    @property
-    def mesh_normal_mode(self):
-        """ """
-        return self._mesh_normal_mode
-
-    @mesh_normal_mode.setter
-    def mesh_normal_mode(self, value):
-        """ """
-        self._mesh_normal_mode = value
 
     @property
     def initial_dof_position(self):
