@@ -560,7 +560,7 @@ class Bullet(Simulator):
 
     def _collect_dof_state(self, body):
         """ """
-        if self._num_links[body.name] > 1:
+        if len(self._dof_indices[body.name]) > 0:
             joint_states = self._p.getJointStates(
                 self._body_ids[body.name], self._dof_indices[body.name]
             )
