@@ -141,8 +141,23 @@ class Bullet(Simulator):
                     raise ValueError(f"'{attr}' must be None for geometry type URDF: '{body.name}'")
             if body.use_fixed_base is not None:
                 kwargs["useFixedBase"] = body.use_fixed_base
+            if body.scale is not None:
+                kwargs["globalScaling"] = body.get_attr_array("scale", 0)
+                if body.attr_array_dirty_flag["scale"]:
+                    body.attr_array_dirty_flag["scale"] = False
             self._body_ids[body.name] = self._p.loadURDF(body.urdf_file, **kwargs)
         else:
+            for attr in ("scale",):
+                if getattr(body, attr) is not None:
+                    geometry_type = [
+                        x
+                        for x in dir(GeometryType)
+                        if not x.startswith("__") and getattr(GeometryType, x) == body.geometry_type
+                    ][0]
+                    raise ValueError(
+                        f"For Bullet, '{attr}' is not supported for geometry type {geometry_type}:"
+                        f" '{body.name}'"
+                    )
             kwargs_visual = {}
             kwargs_collision = {}
             if body.geometry_type == GeometryType.SPHERE:
@@ -650,6 +665,10 @@ class Bullet(Simulator):
                     self._reset_base_velocity(body)
                 body.env_ids_reset_base_state = None
 
+            if body.attr_array_dirty_flag["scale"]:
+                raise ValueError(
+                    f"For Bullet, 'scale' can only be changed before each reset: '{body.name}'"
+                )
             if body.attr_array_dirty_flag["link_color"]:
                 self._set_link_color(body)
                 body.attr_array_dirty_flag["link_color"] = False

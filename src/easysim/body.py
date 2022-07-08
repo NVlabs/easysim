@@ -21,6 +21,7 @@ class Body:
         "dof_force": 1,
     }
     _ATTR_ARRAY_NDIM = {
+        "scale": 0,
         "link_color": 2,
         "link_collision_filter": 1,
         "link_lateral_friction": 1,
@@ -60,6 +61,7 @@ class Body:
         initial_base_velocity=None,
         initial_dof_position=None,
         initial_dof_velocity=None,
+        scale = None,
         link_color=None,
         link_collision_filter=None,
         link_lateral_friction=None,
@@ -101,6 +103,8 @@ class Body:
         self.initial_base_velocity = initial_base_velocity
         self.initial_dof_position = initial_dof_position
         self.initial_dof_velocity = initial_dof_velocity
+
+        self.scale = scale
 
         self.link_color = link_color
         self.link_collision_filter = link_collision_filter
@@ -415,6 +419,29 @@ class Body:
                     f"{self._ATTR_TENSOR_NDIM['initial_dof_velocity'] + 1}"
                 )
         self._initial_dof_velocity = value
+
+    @property
+    def scale(self):
+        """ """
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        """ """
+        assert not self._attr_array_locked["scale"], (
+            "'scale' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["scale"],
+                self._ATTR_ARRAY_NDIM["scale"] + 1,
+            ):
+                raise ValueError(
+                    "'scale' must have a number of dimensions of"
+                    f" {self._ATTR_ARRAY_NDIM['scale']} or {self._ATTR_ARRAY_NDIM['scale'] + 1}"
+                )
+        self._scale = value
 
     @property
     def link_color(self):

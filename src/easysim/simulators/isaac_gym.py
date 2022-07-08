@@ -429,6 +429,9 @@ class IsaacGym(Simulator):
                 if body.env_ids_load is not None and idx not in body.env_ids_load:
                     continue
 
+                if body.scale is not None:
+                    self._set_scale(body, idx)
+
                 if body.link_color is not None:
                     self._set_link_color(body, idx)
 
@@ -439,6 +442,12 @@ class IsaacGym(Simulator):
                     getattr(body, x) is not None for x in self._ATTR_DOF_PROPS
                 ):
                     self._set_dof_props(body, idx)
+
+            if body.scale is None:
+                body.scale = [
+                    self._gym.get_actor_scale(self._envs[idx], self._actor_handles[idx][body.name])
+                    for idx in range(self._num_envs)
+                ]
 
             if body.link_color is None:
                 # Avoid error from `get_rigid_body_color()` when `graphics_device` is set to -1.
@@ -522,6 +531,12 @@ class IsaacGym(Simulator):
                     body.dof_armature = np.tile(dof_props["armature"], (self._num_envs, 1))
 
             body.lock_attr_array()
+
+    def _set_scale(self, body, idx):
+        """ """
+        self._gym.set_actor_scale(
+            self._envs[idx], self._actor_handles[idx][body.name], body.get_attr_array("scale", idx)
+        )
 
     def _set_link_color(self, body, idx):
         """ """
@@ -857,7 +872,7 @@ class IsaacGym(Simulator):
     def _check_and_update_props(self, bodies, env_ids=None):
         """ """
         for body in bodies:
-            for attr in ("link_color",):
+            for attr in ("scale", "link_color"):
                 if body.attr_array_dirty_flag[attr]:
                     if env_ids is not None and not np.all(
                         np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
@@ -868,6 +883,8 @@ class IsaacGym(Simulator):
                         )
                     env_ids_masked = np.nonzero(body.attr_array_dirty_mask[attr])[0]
                     for idx in env_ids_masked:
+                        if attr == "scale":
+                            self._set_scale(body, idx)
                         if attr == "link_color":
                             self._set_link_color(body, idx)
                     body.attr_array_dirty_flag[attr] = False
