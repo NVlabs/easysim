@@ -61,7 +61,7 @@ class Body:
         initial_base_velocity=None,
         initial_dof_position=None,
         initial_dof_velocity=None,
-        scale = None,
+        scale=None,
         link_color=None,
         link_collision_filter=None,
         link_lateral_friction=None,
@@ -428,9 +428,9 @@ class Body:
     @scale.setter
     def scale(self, value):
         """ """
-        assert not self._attr_array_locked["scale"], (
-            "'scale' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
-        )
+        assert not self._attr_array_locked[
+            "scale"
+        ], "'scale' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
             value = np.asanyarray(value, dtype=np.float32)
             if value.ndim not in (
@@ -438,8 +438,8 @@ class Body:
                 self._ATTR_ARRAY_NDIM["scale"] + 1,
             ):
                 raise ValueError(
-                    "'scale' must have a number of dimensions of"
-                    f" {self._ATTR_ARRAY_NDIM['scale']} or {self._ATTR_ARRAY_NDIM['scale'] + 1}"
+                    f"'scale' must have a number of dimensions of {self._ATTR_ARRAY_NDIM['scale']} "
+                    f"or {self._ATTR_ARRAY_NDIM['scale'] + 1}"
                 )
         self._scale = value
 
