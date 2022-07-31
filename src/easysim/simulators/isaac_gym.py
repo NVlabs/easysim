@@ -444,10 +444,16 @@ class IsaacGym(Simulator):
                     self._set_dof_props(body, idx)
 
             if body.scale is None:
-                body.scale = [
-                    self._gym.get_actor_scale(self._envs[idx], self._actor_handles[idx][body.name])
-                    for idx in range(self._num_envs)
-                ]
+                scale = []
+                for idx in range(self._num_envs):
+                    if body.env_ids_load is not None and idx not in body.env_ids_load:
+                        scale_idx = 1.0
+                    else:
+                        scale_idx = self._gym.get_actor_scale(
+                            self._envs[idx], self._actor_handles[idx][body.name]
+                        )
+                    scale.append(scale_idx)
+                body.scale = scale
 
             if body.link_color is None:
                 # Avoid error from `get_rigid_body_color()` when `graphics_device` is set to -1.
