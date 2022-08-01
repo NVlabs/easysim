@@ -1241,6 +1241,9 @@ class IsaacGym(Simulator):
             else:
                 self._gym.poll_viewer_events(self._viewer)
 
+                if self._counter_render != 0:
+                    self._counter_render = 0
+
         self._clear_state(bodies)
         self._contact = None
 
