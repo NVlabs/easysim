@@ -278,7 +278,7 @@ class Bullet(Simulator):
             body.lock_attr_array()
             return
 
-        for attr in ("dof_has_limits",):
+        for attr in ("dof_has_limits", "dof_armature"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
@@ -618,6 +618,8 @@ class Bullet(Simulator):
                 with self._disable_cov_rendering():
                     self._p.removeBody(self._body_ids[body.name])
                     del self._body_ids[body.name]
+                    del self._dof_indices[body.name]
+                    del self._num_links[body.name]
                     self._bodies.remove(body)
         for body in bodies:
             if body.name not in [x.name for x in self._bodies]:
