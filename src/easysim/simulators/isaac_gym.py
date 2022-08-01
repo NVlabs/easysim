@@ -57,9 +57,9 @@ class IsaacGym(Simulator):
         DoFControlMode.TORQUE_CONTROL: gymapi.DOF_MODE_EFFORT,
     }
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, scene):
         """ """
-        super().__init__(cfg)
+        super().__init__(cfg, scene)
 
         x = self._cfg.SIM_DEVICE.split(":")
         sim_device_type = x[0]
@@ -117,7 +117,7 @@ class IsaacGym(Simulator):
 
         return sim_params
 
-    def reset(self, bodies, env_ids):
+    def reset(self, env_ids):
         """ """
         if not self._created:
             self._sim = self._create_sim(
@@ -129,12 +129,14 @@ class IsaacGym(Simulator):
 
             if self._cfg.GROUND_PLANE.LOAD:
                 self._load_ground_plane()
-            self._load_assets(bodies)
+            self._load_assets()
             self._create_envs(
-                self._num_envs, self._cfg.ISAAC_GYM.SPACING, int(np.sqrt(self._num_envs)), bodies
+                self._num_envs, self._cfg.ISAAC_GYM.SPACING, int(np.sqrt(self._num_envs))
             )
-            self._cache_and_set_props(bodies)
-            self._set_callback(bodies)
+
+            self._scene_cache = type(self._scene)()
+            self._cache_and_set_props()
+            self._set_callback()
 
             self._gym.prepare_sim(self._sim)
             self._acquire_physics_state_tensors()
@@ -147,9 +149,9 @@ class IsaacGym(Simulator):
         if env_ids is None:
             env_ids = torch.arange(self._num_envs, device=self._device)
 
-        self._reset_idx(bodies, env_ids)
+        self._reset_idx(env_ids)
 
-        self._clear_state(bodies)
+        self._clear_state()
         self._contact = None
 
     def _create_sim(self, compute_device, graphics_device, physics_engine, sim_params):
@@ -172,7 +174,7 @@ class IsaacGym(Simulator):
         plane_params.distance = self._cfg.GROUND_PLANE.DISTANCE
         self._gym.add_ground(self._sim, plane_params)
 
-    def _load_assets(self, bodies):
+    def _load_assets(self):
         """ """
         self._assets = {}
         self._asset_num_dofs = {}
@@ -182,7 +184,7 @@ class IsaacGym(Simulator):
 
         counter_rigid_body = 0
 
-        for b, body in enumerate(bodies):
+        for b, body in enumerate(self._scene.bodies):
             asset_options = gymapi.AssetOptions()
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
@@ -273,7 +275,7 @@ class IsaacGym(Simulator):
                 self._asset_rigid_body_mapping[counter_rigid_body + i] = [b, i]
             counter_rigid_body += self._asset_num_rigid_bodies[body.name]
 
-    def _create_envs(self, num_envs, spacing, num_per_row, bodies):
+    def _create_envs(self, num_envs, spacing, num_per_row):
         """ """
         lower = gymapi.Vec3(-spacing, -spacing, 0.0)
         upper = gymapi.Vec3(+spacing, +spacing, spacing)
@@ -284,21 +286,21 @@ class IsaacGym(Simulator):
         self._actor_indices = [[] for _ in range(num_envs)]
         self._actor_indices_need_filter = False
 
-        self._actor_root_indices = {body.name: [] for body in bodies}
-        self._dof_indices = {body.name: [] for body in bodies}
-        self._rigid_body_indices = {body.name: [] for body in bodies}
+        self._actor_root_indices = {body.name: [] for body in self._scene.bodies}
+        self._dof_indices = {body.name: [] for body in self._scene.bodies}
+        self._rigid_body_indices = {body.name: [] for body in self._scene.bodies}
         counter_actor = 0
         counter_dof = 0
         counter_rigid_body = 0
 
-        contact_id = {body.name: [] for body in bodies}
+        contact_id = {body.name: [] for body in self._scene.bodies}
 
         for i in range(num_envs):
             env_ptr = self._gym.create_env(self._sim, lower, upper, num_per_row)
 
             counter_body = 0
 
-            for body in bodies:
+            for body in self._scene.bodies:
                 if body.env_ids_load is not None and i not in body.env_ids_load:
                     self._actor_indices[i].append(-1)
                     if not self._actor_indices_need_filter:
@@ -328,7 +330,7 @@ class IsaacGym(Simulator):
         self._actor_indices = torch.tensor(
             self._actor_indices, dtype=torch.int32, device=self._device
         )
-        for body in bodies:
+        for body in self._scene.bodies:
             self._actor_root_indices[body.name] = torch.tensor(
                 self._actor_root_indices[body.name], dtype=torch.int64, device=self._device
             )
@@ -340,14 +342,12 @@ class IsaacGym(Simulator):
             )
             body.contact_id = contact_id[body.name]
 
-    def _cache_and_set_props(self, bodies):
+    def _cache_and_set_props(self):
         """ """
-        self._bodies = type(bodies)()
-
-        for body in bodies:
+        for body in self._scene.bodies:
             x = type(body)()
             x.name = body.name
-            self._bodies.append(x)
+            self._scene_cache.add_body(x)
 
             if self._asset_num_dofs[body.name] == 0:
                 for attr in self._ATTR_DOF_PROPS:
@@ -622,9 +622,9 @@ class IsaacGym(Simulator):
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )
 
-    def _set_callback(self, bodies):
+    def _set_callback(self):
         """ """
-        for body in bodies:
+        for body in self._scene.bodies:
             body.set_callback_collect_dof_state(self._collect_dof_state)
             body.set_callback_collect_link_state(self._collect_link_state)
 
@@ -758,14 +758,16 @@ class IsaacGym(Simulator):
                 len(self._dof_state), dtype=torch.float32, device=self._device
             )
 
-    def _reset_idx(self, bodies, env_ids):
+    def _reset_idx(self, env_ids):
         """ """
-        if [body.name for body in bodies] != [body.name for body in self._bodies]:
+        if [body.name for body in self._scene.bodies] != [
+            body.name for body in self._scene_cache.bodies
+        ]:
             raise ValueError(
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        for body in bodies:
+        for body in self._scene.bodies:
             self._reset_base_state_buffer(body)
 
             if self._asset_num_dofs[body.name] == 0:
@@ -792,7 +794,8 @@ class IsaacGym(Simulator):
         # Reset DoF state.
         if self._dof_state is not None:
             actor_indices = self._actor_indices[
-                env_ids[:, None], [self._asset_num_dofs[body.name] > 0 for body in bodies]
+                env_ids[:, None],
+                [self._asset_num_dofs[body.name] > 0 for body in self._scene.bodies],
             ].view(-1)
             if self._actor_indices_need_filter:
                 actor_indices = actor_indices[actor_indices != -1]
@@ -803,7 +806,7 @@ class IsaacGym(Simulator):
                 len(actor_indices),
             )
 
-        self._check_and_update_props(bodies, env_ids=env_ids)
+        self._check_and_update_props(env_ids=env_ids)
 
     def _reset_base_state_buffer(self, body):
         """ """
@@ -875,9 +878,9 @@ class IsaacGym(Simulator):
             (2, 2),
         )[self._dof_indices[body.name]] = initial_dof_velocity
 
-    def _check_and_update_props(self, bodies, env_ids=None):
+    def _check_and_update_props(self, env_ids=None):
         """ """
-        for body in bodies:
+        for body in self._scene.bodies:
             for attr in ("scale", "link_color"):
                 if body.attr_array_dirty_flag[attr]:
                     if env_ids is not None and not np.all(
@@ -961,30 +964,32 @@ class IsaacGym(Simulator):
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
 
-    def _clear_state(self, bodies):
+    def _clear_state(self):
         """ """
-        for body in bodies:
+        for body in self._scene.bodies:
             body.dof_state = None
             body.link_state = None
 
         self._dof_state_refreshed = False
         self._link_state_refreshed = False
 
-    def step(self, bodies):
+    def step(self):
         """ """
-        if [body.name for body in bodies] != [body.name for body in self._bodies]:
+        if [body.name for body in self._scene.bodies] != [
+            body.name for body in self._scene_cache.bodies
+        ]:
             raise ValueError(
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        self._check_and_update_props(bodies)
+        self._check_and_update_props()
 
         reset_base_state = False
         reset_dof_state = False
         actor_indices_base = []
         actor_indices_dof = []
 
-        for b, body in enumerate(bodies):
+        for b, body in enumerate(self._scene.bodies):
             if body.env_ids_reset_base_state is not None:
                 if body.env_ids_load is not None and not torch.all(
                     torch.isin(body.env_ids_reset_base_state, body.env_ids_load)
@@ -1213,7 +1218,7 @@ class IsaacGym(Simulator):
         if self._device == "cpu" or self._viewer:
             self._gym.fetch_results(self._sim, True)
 
-        self._clear_state(bodies)
+        self._clear_state()
         self._contact = None
 
         if self._viewer:

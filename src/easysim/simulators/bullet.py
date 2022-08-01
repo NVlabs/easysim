@@ -36,9 +36,9 @@ class Bullet(Simulator):
         DoFControlMode.TORQUE_CONTROL: pybullet.TORQUE_CONTROL,
     }
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, scene):
         """ """
-        super().__init__(cfg)
+        super().__init__(cfg, scene)
 
         if self._cfg.NUM_ENVS != 1:
             raise ValueError("NUM_ENVS must be 1 for Bullet")
@@ -48,7 +48,7 @@ class Bullet(Simulator):
         self._connected = False
         self._last_frame_time = 0.0
 
-    def reset(self, bodies, env_ids):
+    def reset(self, env_ids):
         """ """
         if not self._connected:
             if self._cfg.RENDER:
@@ -74,12 +74,13 @@ class Bullet(Simulator):
             if self._cfg.GROUND_PLANE.LOAD:
                 self._body_id_ground_plane = self._load_ground_plane()
 
+            self._scene_cache = type(self._scene)()
+
             self._body_ids = {}
             self._dof_indices = {}
             self._num_links = {}
-            self._bodies = type(bodies)()
 
-            for body in bodies:
+            for body in self._scene.bodies:
                 self._load_body(body)
                 self._cache_and_set_control_and_props(body)
                 self._set_callback(body)
@@ -93,7 +94,7 @@ class Bullet(Simulator):
                     self._cfg.INIT_VIEWER_CAMERA_POSITION, self._cfg.INIT_VIEWER_CAMERA_TARGET
                 )
 
-        self._clear_state(bodies)
+        self._clear_state()
         self._contact = None
 
     @contextmanager
@@ -272,7 +273,7 @@ class Bullet(Simulator):
         """ """
         x = type(body)()
         x.name = body.name
-        self._bodies.append(x)
+        self._scene_cache.add_body(x)
 
         if body.env_ids_load is not None and len(body.env_ids_load) == 0:
             body.lock_attr_array()
@@ -596,13 +597,13 @@ class Bullet(Simulator):
 
         self._p.resetDebugVisualizerCamera(dist, yaw, pitch, target)
 
-    def _clear_state(self, bodies):
+    def _clear_state(self):
         """ """
-        for body in bodies:
+        for body in self._scene.bodies:
             body.dof_state = None
             body.link_state = None
 
-    def step(self, bodies):
+    def step(self):
         """ """
         if self._cfg.RENDER:
             # Simulate real-time rendering with sleep if computation takes less than real time.
@@ -612,28 +613,24 @@ class Bullet(Simulator):
                 time.sleep(time_sleep)
             self._last_frame_time = time.time()
 
-        for body in reversed(self._bodies):
-            if body.name not in [x.name for x in bodies]:
+        for body in reversed(self._scene_cache.bodies):
+            if body.name not in [x.name for x in self._scene.bodies]:
                 # Remove body.
                 with self._disable_cov_rendering():
                     self._p.removeBody(self._body_ids[body.name])
                     del self._body_ids[body.name]
                     del self._dof_indices[body.name]
                     del self._num_links[body.name]
-                    self._bodies.remove(body)
-        for body in bodies:
-            if body.name not in [x.name for x in self._bodies]:
+                    self._scene_cache.remove_body(body)
+        for body in self._scene.bodies:
+            if body.name not in [x.name for x in self._scene_cache.bodies]:
                 # Add body.
                 with self._disable_cov_rendering():
                     self._load_body(body)
                     self._cache_and_set_control_and_props(body)
                     self._set_callback(body)
 
-        assert [body.name for body in bodies] == [
-            body.name for body in self._bodies
-        ], "Mismatched input and cached bodies"
-
-        for body in bodies:
+        for body in self._scene.bodies:
             for attr in (
                 "dof_has_limits",
                 "dof_armature",
@@ -916,7 +913,7 @@ class Bullet(Simulator):
 
         self._p.stepSimulation()
 
-        self._clear_state(bodies)
+        self._clear_state()
         self._contact = None
 
     @property

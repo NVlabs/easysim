@@ -20,7 +20,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         self.init(**kwargs)
 
-        self._simulator = make(self.cfg.SIM.SIMULATOR, cfg=self.cfg.SIM)
+        self._simulator = make(self.cfg.SIM.SIMULATOR, cfg=self.cfg.SIM, scene=self.scene)
 
     @property
     def cfg(self):
@@ -40,7 +40,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
         """ """
         self.pre_reset(env_ids, **kwargs)
 
-        self._simulator.reset(self.scene.bodies, env_ids)
+        self._simulator.reset(env_ids)
 
         observation = self.post_reset(env_ids, **kwargs)
 
@@ -58,7 +58,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
         """ """
         self.pre_step(action)
 
-        self._simulator.step(self.scene.bodies)
+        self._simulator.step()
 
         observation, reward, done, info = self.post_step(action)
 

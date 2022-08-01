@@ -8,16 +8,17 @@ import abc
 class Simulator(abc.ABC):
     """Simulator."""
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, scene):
         """ """
         self._cfg = cfg
+        self._scene = scene
 
     @abc.abstractmethod
-    def reset(self, bodies, env_ids):
+    def reset(self, env_ids):
         """ """
 
     @abc.abstractmethod
-    def step(self, bodies):
+    def step(self):
         """ """
 
     @property
