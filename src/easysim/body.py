@@ -971,8 +971,6 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim != 3:
-                raise ValueError("'dof_state' must have a number of dimensions of 3")
         self._dof_state = value
 
     @property
@@ -987,8 +985,6 @@ class Body:
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
-            if value.ndim != 3:
-                raise ValueError("'link_state' must have a number of dimensions of 3")
         self._link_state = value
 
     @property
@@ -1001,8 +997,6 @@ class Body:
         """ """
         if value is not None:
             value = np.asanyarray(value, dtype=np.int64)
-            if value.ndim != 1:
-                raise ValueError("'contact_id' must have a number of dimensions of 1")
         self._contact_id = value
 
     def get_attr_array(self, attr, idx):
