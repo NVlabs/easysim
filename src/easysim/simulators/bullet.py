@@ -344,9 +344,6 @@ class Bullet(Simulator):
                 f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
             )
 
-        if not body.attr_array_default_flag["link_color"] and body.link_color is not None:
-            self._set_link_color(body)
-
         if body.link_collision_filter is not None:
             self._set_link_collision_filter(body)
 
@@ -356,16 +353,14 @@ class Bullet(Simulator):
         ):
             self._set_link_dynamics(body)
 
+        if not body.attr_array_default_flag["link_color"] and body.link_color is not None:
+            self._set_link_color(body)
+
         if len(self._dof_indices[body.name]) > 0 and any(
             not body.attr_array_default_flag[x] and getattr(body, x) is not None
             for x in self._ATTR_DOF_DYNAMICS
         ):
             self._set_dof_dynamics(body)
-
-        if body.link_color is None:
-            visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
-            body.link_color = [[x[7] for x in visual_data]]
-            body.attr_array_default_flag["link_color"] = True
 
         if any(
             getattr(body, x) is None
@@ -388,6 +383,11 @@ class Bullet(Simulator):
             if body.link_restitution is None:
                 body.link_restitution = [[x[5] for x in dynamics_info]]
                 body.attr_array_default_flag["link_restitution"] = True
+
+        if body.link_color is None:
+            visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
+            body.link_color = [[x[7] for x in visual_data]]
+            body.attr_array_default_flag["link_color"] = True
 
         if len(self._dof_indices[body.name]) > 0 and any(
             getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS
@@ -412,20 +412,6 @@ class Bullet(Simulator):
         ):
             if body.attr_array_dirty_flag[attr]:
                 body.attr_array_dirty_flag[attr] = False
-
-    def _set_link_color(self, body):
-        """ """
-        link_color = body.get_attr_array("link_color", 0)
-        if (
-            not body.attr_array_locked["link_color"]
-            and len(link_color) != self._num_links[body.name]
-        ):
-            raise ValueError(
-                f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
-                f"number of links: '{body.name}' ({self._num_links[body.name]})"
-            )
-        for i in range(-1, self._num_links[body.name] - 1):
-            self._p.changeVisualShape(self._body_ids[body.name], i, rgbaColor=link_color[i + 1])
 
     def _set_link_collision_filter(self, body):
         """ """
@@ -518,6 +504,20 @@ class Bullet(Simulator):
             self._p.changeDynamics(
                 self._body_ids[body.name], -1, **{k: v for k, v in kwargs.items()}
             )
+
+    def _set_link_color(self, body):
+        """ """
+        link_color = body.get_attr_array("link_color", 0)
+        if (
+            not body.attr_array_locked["link_color"]
+            and len(link_color) != self._num_links[body.name]
+        ):
+            raise ValueError(
+                f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
+                f"number of links: '{body.name}' ({self._num_links[body.name]})"
+            )
+        for i in range(-1, self._num_links[body.name] - 1):
+            self._p.changeVisualShape(self._body_ids[body.name], i, rgbaColor=link_color[i + 1])
 
     def _set_dof_dynamics(self, body, dirty_only=False):
         """ """
@@ -669,9 +669,6 @@ class Bullet(Simulator):
                 raise ValueError(
                     f"For Bullet, 'scale' can only be changed before each reset: '{body.name}'"
                 )
-            if body.attr_array_dirty_flag["link_color"]:
-                self._set_link_color(body)
-                body.attr_array_dirty_flag["link_color"] = False
             if body.attr_array_dirty_flag["link_collision_filter"]:
                 self._set_link_collision_filter(body)
                 body.attr_array_dirty_flag["link_collision_filter"] = False
@@ -680,6 +677,9 @@ class Bullet(Simulator):
                 for attr in self._ATTR_LINK_DYNAMICS:
                     if body.attr_array_dirty_flag[attr]:
                         body.attr_array_dirty_flag[attr] = False
+            if body.attr_array_dirty_flag["link_color"]:
+                self._set_link_color(body)
+                body.attr_array_dirty_flag["link_color"] = False
 
             if len(self._dof_indices[body.name]) == 0:
                 for attr in (

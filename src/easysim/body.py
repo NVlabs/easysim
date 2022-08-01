@@ -22,7 +22,6 @@ class Body:
     }
     _ATTR_ARRAY_NDIM = {
         "scale": 0,
-        "link_color": 2,
         "link_collision_filter": 1,
         "link_lateral_friction": 1,
         "link_spinning_friction": 1,
@@ -30,6 +29,7 @@ class Body:
         "link_restitution": 1,
         "link_linear_damping": 0,
         "link_angular_damping": 0,
+        "link_color": 2,
         "dof_has_limits": 1,
         "dof_lower_limit": 1,
         "dof_upper_limit": 1,
@@ -62,7 +62,6 @@ class Body:
         initial_dof_position=None,
         initial_dof_velocity=None,
         scale=None,
-        link_color=None,
         link_collision_filter=None,
         link_lateral_friction=None,
         link_spinning_friction=None,
@@ -70,6 +69,7 @@ class Body:
         link_restitution=None,
         link_linear_damping=None,
         link_angular_damping=None,
+        link_color=None,
         dof_has_limits=None,
         dof_lower_limit=None,
         dof_upper_limit=None,
@@ -106,7 +106,6 @@ class Body:
 
         self.scale = scale
 
-        self.link_color = link_color
         self.link_collision_filter = link_collision_filter
         self.link_lateral_friction = link_lateral_friction
         self.link_spinning_friction = link_spinning_friction
@@ -114,6 +113,7 @@ class Body:
         self.link_restitution = link_restitution
         self.link_linear_damping = link_linear_damping
         self.link_angular_damping = link_angular_damping
+        self.link_color = link_color
 
         self.dof_has_limits = dof_has_limits
         self.dof_lower_limit = dof_lower_limit
@@ -444,31 +444,6 @@ class Body:
         self._scale = value
 
     @property
-    def link_color(self):
-        """ """
-        return self._link_color
-
-    @link_color.setter
-    def link_color(self, value):
-        """ """
-        assert not self._attr_array_locked["link_color"], (
-            "'link_color' cannot be directly changed after simulation starts. Use "
-            "'update_attr_array()'."
-        )
-        if value is not None:
-            value = np.asanyarray(value, dtype=np.float32)
-            if value.ndim not in (
-                self._ATTR_ARRAY_NDIM["link_color"],
-                self._ATTR_ARRAY_NDIM["link_color"] + 1,
-            ):
-                raise ValueError(
-                    "'link_color' must have a number of dimensions of "
-                    f"{self._ATTR_ARRAY_NDIM['link_color']} or "
-                    f"{self._ATTR_ARRAY_NDIM['link_color'] + 1}"
-                )
-        self._link_color = value
-
-    @property
     def link_collision_filter(self):
         """ """
         return self._link_collision_filter
@@ -642,6 +617,31 @@ class Body:
                     f"{self._ATTR_ARRAY_NDIM['link_angular_damping'] + 1}"
                 )
         self._link_angular_damping = value
+
+    @property
+    def link_color(self):
+        """ """
+        return self._link_color
+
+    @link_color.setter
+    def link_color(self, value):
+        """ """
+        assert not self._attr_array_locked["link_color"], (
+            "'link_color' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_color"],
+                self._ATTR_ARRAY_NDIM["link_color"] + 1,
+            ):
+                raise ValueError(
+                    "'link_color' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_color']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_color'] + 1}"
+                )
+        self._link_color = value
 
     @property
     def dof_has_limits(self):

@@ -363,11 +363,11 @@ class IsaacGym(Simulator):
                 if body.scale is not None:
                     self._set_scale(body, idx)
 
-                if body.link_color is not None:
-                    self._set_link_color(body, idx)
-
                 if any(getattr(body, x) is not None for x in self._ATTR_RIGID_SHAPE_PROPS):
                     self._set_rigid_shape_props(body, idx)
+
+                if body.link_color is not None:
+                    self._set_link_color(body, idx)
 
                 if self._asset_num_dofs[body.name] > 0 and any(
                     getattr(body, x) is not None for x in self._ATTR_DOF_PROPS
@@ -385,6 +385,31 @@ class IsaacGym(Simulator):
                         )
                     scale.append(scale_idx)
                 body.scale = scale
+
+            if any(getattr(body, x) is None for x in self._ATTR_RIGID_SHAPE_PROPS):
+                rigid_shape_props = self._gym.get_asset_rigid_shape_properties(
+                    self._assets[body.name]
+                )
+                if body.link_collision_filter is None:
+                    body.link_collision_filter = [
+                        [prop.filter for prop in rigid_shape_props]
+                    ] * self._num_envs
+                if body.link_lateral_friction is None:
+                    body.link_lateral_friction = [
+                        [prop.friction for prop in rigid_shape_props]
+                    ] * self._num_envs
+                if body.link_spinning_friction is None:
+                    body.link_spinning_friction = [
+                        [prop.torsion_friction for prop in rigid_shape_props]
+                    ] * self._num_envs
+                if body.link_rolling_friction is None:
+                    body.link_rolling_friction = [
+                        [prop.rolling_friction for prop in rigid_shape_props]
+                    ] * self._num_envs
+                if body.link_restitution is None:
+                    body.link_restitution = [
+                        [prop.restitution for prop in rigid_shape_props]
+                    ] * self._num_envs
 
             if body.link_color is None:
                 # Avoid error from `get_rigid_body_color()` when `graphics_device` is set to -1.
@@ -413,31 +438,6 @@ class IsaacGym(Simulator):
                                 )
                         link_color.append(link_color_idx)
                     body.link_color = link_color
-
-            if any(getattr(body, x) is None for x in self._ATTR_RIGID_SHAPE_PROPS):
-                rigid_shape_props = self._gym.get_asset_rigid_shape_properties(
-                    self._assets[body.name]
-                )
-                if body.link_collision_filter is None:
-                    body.link_collision_filter = [
-                        [prop.filter for prop in rigid_shape_props]
-                    ] * self._num_envs
-                if body.link_lateral_friction is None:
-                    body.link_lateral_friction = [
-                        [prop.friction for prop in rigid_shape_props]
-                    ] * self._num_envs
-                if body.link_spinning_friction is None:
-                    body.link_spinning_friction = [
-                        [prop.torsion_friction for prop in rigid_shape_props]
-                    ] * self._num_envs
-                if body.link_rolling_friction is None:
-                    body.link_rolling_friction = [
-                        [prop.rolling_friction for prop in rigid_shape_props]
-                    ] * self._num_envs
-                if body.link_restitution is None:
-                    body.link_restitution = [
-                        [prop.restitution for prop in rigid_shape_props]
-                    ] * self._num_envs
 
             if self._asset_num_dofs[body.name] > 0 and any(
                 getattr(body, x) is None for x in self._ATTR_DOF_PROPS
@@ -474,26 +474,6 @@ class IsaacGym(Simulator):
         self._gym.set_actor_scale(
             self._envs[idx], self._actor_handles[idx][body.name], body.get_attr_array("scale", idx)
         )
-
-    def _set_link_color(self, body, idx):
-        """ """
-        link_color = body.get_attr_array("link_color", idx)
-        if (
-            not body.attr_array_locked["link_color"]
-            and len(link_color) != self._asset_num_rigid_bodies[body.name]
-        ):
-            raise ValueError(
-                f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
-                f"number of links ({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
-            )
-        for i in range(self._asset_num_rigid_bodies[body.name]):
-            self._gym.set_rigid_body_color(
-                self._envs[idx],
-                self._actor_handles[idx][body.name],
-                i,
-                gymapi.MESH_VISUAL,
-                gymapi.Vec3(*link_color[i]),
-            )
 
     def _set_rigid_shape_props(self, body, idx):
         """ """
@@ -554,6 +534,26 @@ class IsaacGym(Simulator):
         self._gym.set_actor_rigid_shape_properties(
             self._envs[idx], self._actor_handles[idx][body.name], rigid_shape_props
         )
+
+    def _set_link_color(self, body, idx):
+        """ """
+        link_color = body.get_attr_array("link_color", idx)
+        if (
+            not body.attr_array_locked["link_color"]
+            and len(link_color) != self._asset_num_rigid_bodies[body.name]
+        ):
+            raise ValueError(
+                f"Size of 'link_color' in the link dimension ({len(link_color)}) should match the "
+                f"number of links ({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
+            )
+        for i in range(self._asset_num_rigid_bodies[body.name]):
+            self._gym.set_rigid_body_color(
+                self._envs[idx],
+                self._actor_handles[idx][body.name],
+                i,
+                gymapi.MESH_VISUAL,
+                gymapi.Vec3(*link_color[i]),
+            )
 
     def _set_dof_props(self, body, idx, set_drive_mode=True):
         """ """
