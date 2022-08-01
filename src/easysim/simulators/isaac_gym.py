@@ -1213,6 +1213,9 @@ class IsaacGym(Simulator):
         if self._device == "cpu" or self._viewer:
             self._gym.fetch_results(self._sim, True)
 
+        self._clear_state(bodies)
+        self._contact = None
+
         if self._viewer:
             if self._gym.query_viewer_has_closed(self._viewer):
                 sys.exit()
@@ -1243,9 +1246,6 @@ class IsaacGym(Simulator):
 
                 if self._counter_render != 0:
                     self._counter_render = 0
-
-        self._clear_state(bodies)
-        self._contact = None
 
     @property
     def contact(self):
