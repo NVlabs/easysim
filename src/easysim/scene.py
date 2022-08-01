@@ -39,7 +39,6 @@ class Scene:
         """ """
         if body not in self.bodies:
             raise ValueError("body not in the scene")
-
         self.bodies.remove(body)
 
         del self._name_to_body[body.name]
