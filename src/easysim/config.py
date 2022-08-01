@@ -36,6 +36,8 @@ _C.SIM.INIT_VIEWER_CAMERA_POSITION = (None, None, None)
 
 _C.SIM.INIT_VIEWER_CAMERA_TARGET = (None, None, None)
 
+_C.SIM.DRAW_VIEWER_AXES = True
+
 _C.SIM.NUM_ENVS = 1
 
 _C.SIM.SIM_DEVICE = "cpu"
@@ -61,6 +63,8 @@ _C.SIM.ISAAC_GYM.USE_GPU_PIPELINE = False
 _C.SIM.ISAAC_GYM.SPACING = 2.0
 
 _C.SIM.ISAAC_GYM.RENDER_FRAME_RATE = 60
+
+_C.SIM.ISAAC_GYM.ENABLE_CAMERA_SENSORS = False
 
 # ---------------------------------------------------------------------------- #
 # Isaac Gym PhysX config

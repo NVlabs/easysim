@@ -30,6 +30,7 @@ class Body:
         "link_linear_damping": 0,
         "link_angular_damping": 0,
         "link_color": 2,
+        "link_segmentation_id": 1,
         "dof_has_limits": 1,
         "dof_lower_limit": 1,
         "dof_upper_limit": 1,
@@ -70,6 +71,7 @@ class Body:
         link_linear_damping=None,
         link_angular_damping=None,
         link_color=None,
+        link_segmentation_id=None,
         dof_has_limits=None,
         dof_lower_limit=None,
         dof_upper_limit=None,
@@ -113,7 +115,9 @@ class Body:
         self.link_restitution = link_restitution
         self.link_linear_damping = link_linear_damping
         self.link_angular_damping = link_angular_damping
+
         self.link_color = link_color
+        self.link_segmentation_id = link_segmentation_id
 
         self.dof_has_limits = dof_has_limits
         self.dof_lower_limit = dof_lower_limit
@@ -642,6 +646,31 @@ class Body:
                     f"{self._ATTR_ARRAY_NDIM['link_color'] + 1}"
                 )
         self._link_color = value
+
+    @property
+    def link_segmentation_id(self):
+        """ """
+        return self._link_segmentation_id
+
+    @link_segmentation_id.setter
+    def link_segmentation_id(self, value):
+        """ """
+        assert not self._attr_array_locked["link_segmentation_id"], (
+            "'link_segmentation_id' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.int64)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["link_segmentation_id"],
+                self._ATTR_ARRAY_NDIM["link_segmentation_id"] + 1,
+            ):
+                raise ValueError(
+                    "'link_segmentation_id' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['link_segmentation_id']} or "
+                    f"{self._ATTR_ARRAY_NDIM['link_segmentation_id'] + 1}"
+                )
+        self._link_segmentation_id = value
 
     @property
     def dof_has_limits(self):

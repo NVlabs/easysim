@@ -30,6 +30,8 @@ class Bullet(Simulator):
         "dof_lower_limit",
         "dof_upper_limit",
     )
+    _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
+    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector")
     _DOF_CONTROL_MODE_MAP = {
         DoFControlMode.POSITION_CONTROL: pybullet.POSITION_CONTROL,
         DoFControlMode.VELOCITY_CONTROL: pybullet.VELOCITY_CONTROL,
@@ -40,6 +42,8 @@ class Bullet(Simulator):
         """ """
         super().__init__(cfg, scene)
 
+        if not self._cfg.DRAW_VIEWER_AXES:
+            raise ValueError("DRAW_VIEWER_AXES must be True for Bullet")
         if self._cfg.NUM_ENVS != 1:
             raise ValueError("NUM_ENVS must be 1 for Bullet")
         if self._cfg.SIM_DEVICE != "cpu":
@@ -56,7 +60,6 @@ class Bullet(Simulator):
             else:
                 self._p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
             self._p.setAdditionalSearchPath(pybullet_data.getDataPath())
-            self._connected = True
 
         with self._disable_cov_rendering():
             self._p.resetSimulation()
@@ -82,8 +85,19 @@ class Bullet(Simulator):
 
             for body in self._scene.bodies:
                 self._load_body(body)
-                self._cache_and_set_control_and_props(body)
-                self._set_callback(body)
+                self._cache_body_and_set_control_and_props(body)
+                self._set_callback_body(body)
+
+            self._projection_matrix = {}
+            self._view_matrix = {}
+            self._image_cache = {}
+
+            for camera in self._scene.cameras:
+                self._load_camera(camera)
+                self._set_callback_camera(camera)
+
+            if not self._connected:
+                self._set_callback_scene()
 
             if (
                 self._cfg.RENDER
@@ -94,7 +108,11 @@ class Bullet(Simulator):
                     self._cfg.INIT_VIEWER_CAMERA_POSITION, self._cfg.INIT_VIEWER_CAMERA_TARGET
                 )
 
+        if not self._connected:
+            self._connected = True
+
         self._clear_state()
+        self._clear_image()
         self._contact = None
 
     @contextmanager
@@ -269,7 +287,7 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
                 )
 
-    def _cache_and_set_control_and_props(self, body):
+    def _cache_body_and_set_control_and_props(self, body):
         """ """
         x = type(body)()
         x.name = body.name
@@ -279,7 +297,7 @@ class Bullet(Simulator):
             body.lock_attr_array()
             return
 
-        for attr in ("dof_has_limits", "dof_armature"):
+        for attr in ("link_segmentation_id", "dof_has_limits", "dof_armature"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
@@ -554,7 +572,7 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, **{k: v[i] for k, v in kwargs.items()}
                 )
 
-    def _set_callback(self, body):
+    def _set_callback_body(self, body):
         """ """
         body.set_callback_collect_dof_state(self._collect_dof_state)
         body.set_callback_collect_link_state(self._collect_link_state)
@@ -586,6 +604,135 @@ class Bullet(Simulator):
             link_state += [x[4] + x[5] + x[6] + x[7] for x in link_states]
         body.link_state = [link_state]
 
+    def _load_camera(self, camera):
+        """ """
+        self._set_projection_matrix(camera)
+        self._set_view_matrix(camera)
+
+        self._image_cache[camera.name] = {}
+        self._clear_image_cache(camera)
+
+        camera.lock_attr_array()
+
+    def _set_projection_matrix(self, camera):
+        """ """
+        self._projection_matrix[camera.name] = self._p.computeProjectionMatrixFOV(
+            camera.get_attr_array("vertical_fov", 0),
+            camera.get_attr_array("width", 0) / camera.get_attr_array("height", 0),
+            camera.get_attr_array("near", 0),
+            camera.get_attr_array("far", 0),
+        )
+
+    def _set_view_matrix(self, camera):
+        """ """
+        self._view_matrix[camera.name] = self._p.computeViewMatrix(
+            camera.get_attr_array("position", 0),
+            camera.get_attr_array("target", 0),
+            camera.get_attr_array("up_vector", 0),
+        )
+
+    def _clear_image_cache(self, camera):
+        """ """
+        self._image_cache[camera.name]["color"] = None
+        self._image_cache[camera.name]["depth"] = None
+        self._image_cache[camera.name]["segmentation"] = None
+
+    def _set_callback_camera(self, camera):
+        """ """
+        camera.set_callback_render_color(self._render_color)
+        camera.set_callback_render_depth(self._render_depth)
+        camera.set_callback_render_segmentation(self._render_segmentation)
+
+    def _render_color(self, camera):
+        """ """
+        for body in self._scene.bodies:
+            if body.attr_array_dirty_flag["link_color"]:
+                self._set_link_color(body)
+                body.attr_array_dirty_flag["link_color"] = False
+                if self._image_cache[camera.name]["color"] is not None:
+                    self._image_cache[camera.name]["color"] = None
+
+        self._check_and_update_camera(camera)
+        if self._image_cache[camera.name]["color"] is None:
+            self._render(camera)
+        camera.color = self._image_cache[camera.name]["color"][None]
+
+    def _render_depth(self, camera):
+        """ """
+        self._check_and_update_camera(camera)
+        if self._image_cache[camera.name]["depth"] is None:
+            self._render(camera)
+        depth = (
+            camera.get_attr_array("far", 0)
+            * camera.get_attr_array("near", 0)
+            / (
+                camera.get_attr_array("far", 0)
+                - (camera.get_attr_array("far", 0) - camera.get_attr_array("near", 0))
+                * self._image_cache[camera.name]["depth"]
+            )
+        )
+        depth[self._image_cache[camera.name]["depth"] == 1.0] = 0.0
+        camera.depth = depth[None]
+
+    def _render_segmentation(self, camera):
+        """ """
+        for body in self._scene.bodies:
+            for attr in ("link_segmentation_id",):
+                if getattr(body, attr) is not None:
+                    raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
+
+        self._check_and_update_camera(camera)
+        if self._image_cache[camera.name]["segmentation"] is None:
+            self._render(camera)
+        camera.segmentation = self._image_cache[camera.name]["segmentation"][None]
+
+    def _check_and_update_camera(self, camera):
+        """ """
+        if any(camera.attr_array_dirty_flag[x] for x in self._ATTR_PROJECTION_MATRIX):
+            self._set_projection_matrix(camera)
+            for attr in self._ATTR_PROJECTION_MATRIX:
+                if camera.attr_array_dirty_flag[attr]:
+                    camera.attr_array_dirty_flag[attr] = False
+            self._clear_image_cache(camera)
+        if any(camera.attr_array_dirty_flag[x] for x in self._ATTR_VIEW_MATRIX):
+            self._set_view_matrix(camera)
+            for attr in self._ATTR_VIEW_MATRIX:
+                if camera.attr_array_dirty_flag[attr]:
+                    camera.attr_array_dirty_flag[attr] = False
+            self._clear_image_cache(camera)
+
+    def _render(self, camera):
+        """ """
+        (
+            _,
+            _,
+            self._image_cache[camera.name]["color"],
+            self._image_cache[camera.name]["depth"],
+            self._image_cache[camera.name]["segmentation"],
+        ) = self._p.getCameraImage(
+            camera.get_attr_array("width", 0),
+            camera.get_attr_array("height", 0),
+            viewMatrix=self._view_matrix[camera.name],
+            projectionMatrix=self._projection_matrix[camera.name],
+            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
+        )
+
+    def _set_callback_scene(self):
+        """ """
+        self._scene.set_callback_add_camera(self._add_camera)
+        self._scene.set_callback_remove_camera(self._remove_camera)
+
+    def _add_camera(self, camera):
+        """ """
+        self._load_camera(camera)
+        self._set_callback_camera(camera)
+
+    def _remove_camera(self, camera):
+        """ """
+        del self._projection_matrix[camera.name]
+        del self._view_matrix[camera.name]
+        del self._image_cache[camera.name]
+
     def _set_viewer_camera_pose(self, position, target):
         """ """
         disp = [x - y for x, y in zip(position, target)]
@@ -602,6 +749,15 @@ class Bullet(Simulator):
         for body in self._scene.bodies:
             body.dof_state = None
             body.link_state = None
+
+    def _clear_image(self):
+        """ """
+        for camera in self._scene.cameras:
+            camera.color = None
+            camera.depth = None
+            camera.segmentation = None
+
+            self._clear_image_cache(camera)
 
     def step(self):
         """ """
@@ -627,11 +783,12 @@ class Bullet(Simulator):
                 # Add body.
                 with self._disable_cov_rendering():
                     self._load_body(body)
-                    self._cache_and_set_control_and_props(body)
-                    self._set_callback(body)
+                    self._cache_body_and_set_control_and_props(body)
+                    self._set_callback_body(body)
 
         for body in self._scene.bodies:
             for attr in (
+                "link_segmentation_id",
                 "dof_has_limits",
                 "dof_armature",
             ):
@@ -914,6 +1071,7 @@ class Bullet(Simulator):
         self._p.stepSimulation()
 
         self._clear_state()
+        self._clear_image()
         self._contact = None
 
     @property

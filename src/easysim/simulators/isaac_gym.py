@@ -45,6 +45,8 @@ class IsaacGym(Simulator):
         "dof_velocity_gain",
         "dof_armature",
     )
+    _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
+    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector")
     _MESH_NORMAL_MODE_MAP = {
         MeshNormalMode.FROM_ASSET: gymapi.FROM_ASSET,
         MeshNormalMode.COMPUTE_PER_VERTEX: gymapi.COMPUTE_PER_VERTEX,
@@ -76,7 +78,11 @@ class IsaacGym(Simulator):
                 print("GPU pipeline can only be used with GPU simulation. Forcing CPU pipeline.")
                 self._cfg.ISAAC_GYM.USE_GPU_PIPELINE = False
 
-        if not self._cfg.RENDER and self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1:
+        if (
+            not self._cfg.RENDER
+            and not self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS
+            and self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1
+        ):
             self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID = -1
 
         # Support only PhysX for now.
@@ -135,8 +141,11 @@ class IsaacGym(Simulator):
             )
 
             self._scene_cache = type(self._scene)()
-            self._cache_and_set_props()
-            self._set_callback()
+            self._cache_body_and_set_props()
+            self._set_callback_body()
+            self._set_camera_props()
+            self._set_callback_camera()
+            self._set_callback_scene()
 
             self._gym.prepare_sim(self._sim)
             self._acquire_physics_state_tensors()
@@ -151,7 +160,9 @@ class IsaacGym(Simulator):
 
         self._reset_idx(env_ids)
 
+        self._graphics_stepped = False
         self._clear_state()
+        self._clear_image()
         self._contact = None
 
     def _create_sim(self, compute_device, graphics_device, physics_engine, sim_params):
@@ -295,6 +306,14 @@ class IsaacGym(Simulator):
 
         contact_id = {body.name: [] for body in self._scene.bodies}
 
+        if len(self._scene.cameras) > 0 and not self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
+            raise ValueError(
+                "For Isaac Gym, ISAAC_GYM.ENABLE_CAMERA_SENSORS must be True if any cameras is used"
+            )
+
+        self._camera_handles = [{} for _ in range(num_envs)]
+        self._camera_image_buffer = [{} for _ in range(num_envs)]
+
         for i in range(num_envs):
             env_ptr = self._gym.create_env(self._sim, lower, upper, num_per_row)
 
@@ -325,6 +344,28 @@ class IsaacGym(Simulator):
                 contact_id[body.name].append(counter_body)
                 counter_body += 1
 
+            for camera in self._scene.cameras:
+                camera_props = self._make_camera_props(camera, i)
+                camera_handle = self._gym.create_camera_sensor(env_ptr, camera_props)
+
+                color = self._gym.get_camera_image_gpu_tensor(
+                    self._sim, env_ptr, camera_handle, gymapi.IMAGE_COLOR
+                )
+                depth = self._gym.get_camera_image_gpu_tensor(
+                    self._sim, env_ptr, camera_handle, gymapi.IMAGE_DEPTH
+                )
+                segmentation = self._gym.get_camera_image_gpu_tensor(
+                    self._sim, env_ptr, camera_handle, gymapi.IMAGE_SEGMENTATION
+                )
+
+                self._camera_handles[i][camera.name] = camera_handle
+                self._camera_image_buffer[i][camera.name] = {}
+                self._camera_image_buffer[i][camera.name]["color"] = gymtorch.wrap_tensor(color)
+                self._camera_image_buffer[i][camera.name]["depth"] = gymtorch.wrap_tensor(depth)
+                self._camera_image_buffer[i][camera.name]["segmentation"] = gymtorch.wrap_tensor(
+                    segmentation
+                )
+
             self._envs.append(env_ptr)
 
         self._actor_indices = torch.tensor(
@@ -342,7 +383,34 @@ class IsaacGym(Simulator):
             )
             body.contact_id = contact_id[body.name]
 
-    def _cache_and_set_props(self):
+    def _make_camera_props(self, camera, idx):
+        """ """
+        camera_props = gymapi.CameraProperties()
+
+        if camera.width is not None:
+            camera_props.width = camera.get_attr_array("width", idx)
+        if camera.height is not None:
+            camera_props.height = camera.get_attr_array("height", idx)
+        if camera.vertical_fov is not None:
+            if camera.width is None or camera.height is None:
+                raise ValueError(
+                    "For Isaac Gym, cannot set 'vertical_fov' without setting 'width' and "
+                    f"'height': '{camera.name}'"
+                )
+            camera_props.horizontal_fov = (
+                camera.get_attr_array("vertical_fov", idx)
+                * camera.get_attr_array("width", idx)
+                / camera.get_attr_array("height", idx)
+            )
+        if camera.near is not None:
+            camera_props.near_plane = camera.get_attr_array("near", idx)
+        if camera.far is not None:
+            camera_props.far_plane = camera.get_attr_array("far", idx)
+        camera_props.enable_tensors = True
+
+        return camera_props
+
+    def _cache_body_and_set_props(self):
         """ """
         for body in self._scene.bodies:
             x = type(body)()
@@ -368,6 +436,9 @@ class IsaacGym(Simulator):
 
                 if body.link_color is not None:
                     self._set_link_color(body, idx)
+
+                if body.link_segmentation_id is not None:
+                    self._set_link_segmentation_id(body, idx)
 
                 if self._asset_num_dofs[body.name] > 0 and any(
                     getattr(body, x) is not None for x in self._ATTR_DOF_PROPS
@@ -555,6 +626,23 @@ class IsaacGym(Simulator):
                 gymapi.Vec3(*link_color[i]),
             )
 
+    def _set_link_segmentation_id(self, body, idx):
+        """ """
+        link_segmentation_id = body.get_attr_array("link_segmentation_id", idx)
+        if (
+            not body.attr_array_locked["link_segmentation_id"]
+            and len(link_segmentation_id) != self._asset_num_rigid_bodies[body.name]
+        ):
+            raise ValueError(
+                "Size of 'link_segmentation_id' in the link dimension "
+                f"({len(link_segmentation_id)}) should match the number of links "
+                f"({self._asset_num_rigid_bodies[body.name]}): '{body.name}'"
+            )
+        for i in range(self._asset_num_rigid_bodies[body.name]):
+            self._gym.set_rigid_body_segmentation_id(
+                self._envs[idx], self._actor_handles[idx][body.name], i, link_segmentation_id[i]
+            )
+
     def _set_dof_props(self, body, idx, set_drive_mode=True):
         """ """
         dof_props = self._gym.get_actor_dof_properties(
@@ -622,7 +710,7 @@ class IsaacGym(Simulator):
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )
 
-    def _set_callback(self):
+    def _set_callback_body(self):
         """ """
         for body in self._scene.bodies:
             body.set_callback_collect_dof_state(self._collect_dof_state)
@@ -689,6 +777,177 @@ class IsaacGym(Simulator):
                 (13, 13, 1),
             )[self._rigid_body_indices[body.name]]
 
+    def _set_camera_props(self):
+        """ """
+        for camera in self._scene.cameras:
+            for idx in range(self._num_envs):
+                self._set_camera_pose(camera, idx)
+
+            if any(getattr(camera, x) is None for x in self._ATTR_PROJECTION_MATRIX):
+                camera_props = gymapi.CameraProperties()
+                if camera.width is None:
+                    camera.width = [camera_props.width] * self._num_envs
+                if camera.height is None:
+                    camera.height = [camera_props.height] * self._num_envs
+                if camera.vertical_fov is None:
+                    camera.vertical_fov = (
+                        [camera_props.horizontal_fov]
+                        * self._num_envs
+                        * camera.height
+                        / camera.width
+                    )
+                if camera.near is None:
+                    camera.near = [camera_props.near_plane] * self._num_envs
+                if camera.far is None:
+                    camera.far = [camera_props.far_plane] * self._num_envs
+
+            camera.lock_attr_array()
+
+    def _set_camera_pose(self, camera, idx):
+        """ """
+        for attr in ("up_vector",):
+            if getattr(camera, attr) is not None:
+                raise ValueError(f"'{attr}' is not supported in Isaac Gym: '{camera.name}'")
+        self._gym.set_camera_location(
+            self._camera_handles[idx][camera.name],
+            self._envs[idx],
+            gymapi.Vec3(*camera.get_attr_array("position", idx)),
+            gymapi.Vec3(*camera.get_attr_array("target", idx)),
+        )
+
+    def _set_callback_camera(self):
+        """ """
+        for camera in self._scene.cameras:
+            camera.set_callback_render_color(self._render_color)
+            camera.set_callback_render_depth(self._render_depth)
+            camera.set_callback_render_segmentation(self._render_segmentation)
+
+    def _render_color(self, camera):
+        """ """
+        for body in self._scene.bodies:
+            if body.attr_array_dirty_flag["link_color"]:
+                env_ids_masked = np.nonzero(body.attr_array_dirty_mask["link_color"])[0]
+                for idx in env_ids_masked:
+                    self._set_link_color(body, idx)
+                body.attr_array_dirty_flag["link_color"] = False
+                body.attr_array_dirty_mask["link_color"][:] = False
+                if self._all_camera_rendered:
+                    self._all_camera_rendered = False
+
+        self._check_and_step_graphics()
+        self._check_and_update_camera_props(camera)
+        self._check_and_render_all_camera()
+
+        color = self._camera_image_buffer[0][camera.name]["color"].new_zeros(
+            (self._num_envs, np.max(camera.height), np.max(camera.width), 4)
+        )
+
+        self._gym.start_access_image_tensors(self._sim)
+        for idx in range(self._num_envs):
+            color[
+                idx, : camera.get_attr_array("height", idx), : camera.get_attr_array("width", idx)
+            ] = self._camera_image_buffer[idx][camera.name]["color"]
+        self._gym.end_access_image_tensors(self._sim)
+
+        camera.color = color
+
+    def _render_depth(self, camera):
+        """ """
+        self._check_and_step_graphics()
+        self._check_and_update_camera_props(camera)
+        self._check_and_render_all_camera()
+
+        depth = self._camera_image_buffer[0][camera.name]["depth"].new_zeros(
+            (self._num_envs, np.max(camera.height), np.max(camera.width))
+        )
+
+        self._gym.start_access_image_tensors(self._sim)
+        for idx in range(self._num_envs):
+            depth[
+                idx, : camera.get_attr_array("height", idx), : camera.get_attr_array("width", idx)
+            ] = self._camera_image_buffer[idx][camera.name]["depth"]
+        self._gym.end_access_image_tensors(self._sim)
+
+        depth *= -1.0
+        depth[depth == +np.inf] = 0.0
+
+        camera.depth = depth
+
+    def _render_segmentation(self, camera):
+        """ """
+        for body in self._scene.bodies:
+            if body.attr_array_dirty_flag["link_segmentation_id"]:
+                env_ids_masked = np.nonzero(body.attr_array_dirty_mask["link_segmentation_id"])[0]
+                for idx in env_ids_masked:
+                    self._set_link_segmentation_id(body, idx)
+                body.attr_array_dirty_flag["link_segmentation_id"] = False
+                body.attr_array_dirty_mask["link_segmentation_id"][:] = False
+                if self._all_camera_rendered:
+                    self._all_camera_rendered = False
+
+        self._check_and_step_graphics()
+        self._check_and_update_camera_props(camera)
+        self._check_and_render_all_camera()
+
+        segmentation = self._camera_image_buffer[0][camera.name]["segmentation"].new_zeros(
+            (self._num_envs, np.max(camera.height), np.max(camera.width))
+        )
+
+        self._gym.start_access_image_tensors(self._sim)
+        for idx in range(self._num_envs):
+            segmentation[
+                idx, : camera.get_attr_array("height", idx), : camera.get_attr_array("width", idx)
+            ] = self._camera_image_buffer[idx][camera.name]["segmentation"]
+        self._gym.end_access_image_tensors(self._sim)
+
+        camera.segmentation = segmentation
+
+    def _check_and_step_graphics(self):
+        """ """
+        if not self._graphics_stepped:
+            self._gym.step_graphics(self._sim)
+            self._graphics_stepped = True
+
+    def _check_and_update_camera_props(self, camera):
+        """ """
+        if any(camera.attr_array_dirty_flag[x] for x in self._ATTR_VIEW_MATRIX):
+            mask = np.zeros(self._num_envs, dtype=bool)
+            for attr in self._ATTR_VIEW_MATRIX:
+                if camera.attr_array_dirty_flag[attr]:
+                    mask |= camera.attr_array_dirty_mask[attr]
+            env_ids_masked = np.nonzero(mask)[0]
+            for idx in env_ids_masked:
+                self._set_camera_pose(camera, idx)
+            for attr in self._ATTR_VIEW_MATRIX:
+                if camera.attr_array_dirty_flag[attr]:
+                    camera.attr_array_dirty_flag[attr] = False
+                    camera.attr_array_dirty_mask[attr][:] = False
+            if self._all_camera_rendered:
+                self._all_camera_rendered = False
+
+    def _check_and_render_all_camera(self):
+        """ """
+        if not self._all_camera_rendered:
+            self._gym.render_all_camera_sensors(self._sim)
+            self._all_camera_rendered = True
+
+    def _set_callback_scene(self):
+        """ """
+        self._scene.set_callback_add_camera(self._add_camera)
+        self._scene.set_callback_remove_camera(self._remove_camera)
+
+    def _add_camera(self, camera):
+        """ """
+        raise ValueError(
+            "For Isaac Gym, the set of cameras cannot be altered after the first reset"
+        )
+
+    def _remove_camera(self, camera):
+        """ """
+        raise ValueError(
+            "For Isaac Gym, the set of cameras cannot be altered after the first reset"
+        )
+
     def _acquire_physics_state_tensors(self):
         """ """
         actor_root_state = self._gym.acquire_actor_root_state_tensor(self._sim)
@@ -723,10 +982,6 @@ class IsaacGym(Simulator):
                 self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
             )
 
-            axes_geom = gymutil.AxesGeometry(1.0)
-            for env_ptr in self._envs:
-                gymutil.draw_lines(axes_geom, self._gym, self._viewer, env_ptr, gymapi.Transform())
-
             if (
                 self._cfg.INIT_VIEWER_CAMERA_POSITION
                 != (
@@ -736,10 +991,19 @@ class IsaacGym(Simulator):
                 )
                 and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None)
             ):
-                cam_pos = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_POSITION)
-                cam_target = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_TARGET)
+                self._gym.viewer_camera_look_at(
+                    self._viewer,
+                    None,
+                    gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_POSITION),
+                    gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_TARGET),
+                )
 
-                self._gym.viewer_camera_look_at(self._viewer, None, cam_pos, cam_target)
+            if self._cfg.DRAW_VIEWER_AXES:
+                axes_geom = gymutil.AxesGeometry(1.0)
+                for env_ptr in self._envs:
+                    gymutil.draw_lines(
+                        axes_geom, self._gym, self._viewer, env_ptr, gymapi.Transform()
+                    )
 
     def _allocate_buffers(self):
         """ """
@@ -806,7 +1070,7 @@ class IsaacGym(Simulator):
                 len(actor_indices),
             )
 
-        self._check_and_update_props(env_ids=env_ids)
+        self._check_and_update_body_props(env_ids=env_ids)
 
     def _reset_base_state_buffer(self, body):
         """ """
@@ -878,7 +1142,7 @@ class IsaacGym(Simulator):
             (2, 2),
         )[self._dof_indices[body.name]] = initial_dof_velocity
 
-    def _check_and_update_props(self, env_ids=None):
+    def _check_and_update_body_props(self, env_ids=None):
         """ """
         for body in self._scene.bodies:
             for attr in ("scale", "link_color"):
@@ -973,6 +1237,15 @@ class IsaacGym(Simulator):
         self._dof_state_refreshed = False
         self._link_state_refreshed = False
 
+    def _clear_image(self):
+        """ """
+        for camera in self._scene.cameras:
+            camera.color = None
+            camera.depth = None
+            camera.segmentation = None
+
+        self._all_camera_rendered = False
+
     def step(self):
         """ """
         if [body.name for body in self._scene.bodies] != [
@@ -982,7 +1255,7 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        self._check_and_update_props()
+        self._check_and_update_body_props()
 
         reset_base_state = False
         reset_dof_state = False
@@ -1215,10 +1488,12 @@ class IsaacGym(Simulator):
             )
 
         self._gym.simulate(self._sim)
-        if self._device == "cpu" or self._viewer:
+        if self._device == "cpu" or self._cfg.RENDER or self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
             self._gym.fetch_results(self._sim, True)
 
+        self._graphics_stepped = False
         self._clear_state()
+        self._clear_image()
         self._contact = None
 
         if self._viewer:
@@ -1242,7 +1517,8 @@ class IsaacGym(Simulator):
                         time.sleep(time_sleep)
                     self._last_render_time = time.time()
 
-                    self._gym.step_graphics(self._sim)
+                    self._check_and_step_graphics()
+
                     self._gym.draw_viewer(self._viewer, self._sim)
 
                 self._counter_render += 1
@@ -1287,6 +1563,11 @@ class IsaacGym(Simulator):
     def close(self):
         """ """
         if self._created:
+            for idx in range(self._num_envs):
+                for name in self._camera_handles[idx]:
+                    self._gym.destroy_camera_sensor(
+                        self._sim, self._envs[idx], self._camera_handles[idx][name]
+                    )
             self._gym.destroy_viewer(self._viewer)
             self._gym.destroy_sim(self._sim)
             self._created = False
