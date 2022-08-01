@@ -45,16 +45,16 @@ class IsaacGym(Simulator):
         "dof_velocity_gain",
         "dof_armature",
     )
+    _MESH_NORMAL_MODE_MAP = {
+        MeshNormalMode.FROM_ASSET: gymapi.FROM_ASSET,
+        MeshNormalMode.COMPUTE_PER_VERTEX: gymapi.COMPUTE_PER_VERTEX,
+        MeshNormalMode.COMPUTE_PER_FACE: gymapi.COMPUTE_PER_FACE,
+    }
     _DOF_CONTROL_MODE_MAP = {
         DoFControlMode.NONE: gymapi.DOF_MODE_NONE,
         DoFControlMode.POSITION_CONTROL: gymapi.DOF_MODE_POS,
         DoFControlMode.VELOCITY_CONTROL: gymapi.DOF_MODE_VEL,
         DoFControlMode.TORQUE_CONTROL: gymapi.DOF_MODE_EFFORT,
-    }
-    _MESH_NORMAL_MODE_MAP = {
-        MeshNormalMode.FROM_ASSET: gymapi.FROM_ASSET,
-        MeshNormalMode.COMPUTE_PER_VERTEX: gymapi.COMPUTE_PER_VERTEX,
-        MeshNormalMode.COMPUTE_PER_FACE: gymapi.COMPUTE_PER_FACE,
     }
 
     def __init__(self, cfg):
@@ -339,75 +339,6 @@ class IsaacGym(Simulator):
                 self._rigid_body_indices[body.name], dtype=torch.int64, device=self._device
             )
             body.contact_id = contact_id[body.name]
-
-    def _acquire_physics_state_tensors(self):
-        """ """
-        actor_root_state = self._gym.acquire_actor_root_state_tensor(self._sim)
-        dof_state = self._gym.acquire_dof_state_tensor(self._sim)
-        rigid_body_state = self._gym.acquire_rigid_body_state_tensor(self._sim)
-
-        self._gym.refresh_actor_root_state_tensor(self._sim)
-        self._gym.refresh_dof_state_tensor(self._sim)
-
-        self._actor_root_state = gymtorch.wrap_tensor(actor_root_state)
-        self._dof_state = gymtorch.wrap_tensor(dof_state)
-        self._rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)
-
-        if self._actor_root_state is None:
-            self._initial_actor_root_state = None
-        else:
-            self._initial_actor_root_state = self._actor_root_state.clone()
-        if self._dof_state is None:
-            self._initial_dof_state = None
-        else:
-            self._initial_dof_state = self._dof_state.clone()
-
-    def _set_viewer(self):
-        """ """
-        self._enable_viewer_sync = True
-        self._viewer = None
-
-        if self._cfg.RENDER:
-            self._viewer = self._gym.create_viewer(self._sim, gymapi.CameraProperties())
-            self._gym.subscribe_viewer_keyboard_event(self._viewer, gymapi.KEY_ESCAPE, "quit")
-            self._gym.subscribe_viewer_keyboard_event(
-                self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
-            )
-
-            axes_geom = gymutil.AxesGeometry(1.0)
-            for env_ptr in self._envs:
-                gymutil.draw_lines(axes_geom, self._gym, self._viewer, env_ptr, gymapi.Transform())
-
-            if (
-                self._cfg.INIT_VIEWER_CAMERA_POSITION
-                != (
-                    None,
-                    None,
-                    None,
-                )
-                and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None)
-            ):
-                cam_pos = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_POSITION)
-                cam_target = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_TARGET)
-
-                self._gym.viewer_camera_look_at(self._viewer, None, cam_pos, cam_target)
-
-    def _allocate_buffers(self):
-        """ """
-        if self._dof_state is None:
-            self._dof_position_target_buffer = None
-            self._dof_velocity_target_buffer = None
-            self._dof_actuation_force_buffer = None
-        else:
-            self._dof_position_target_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
-            )
-            self._dof_velocity_target_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
-            )
-            self._dof_actuation_force_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
-            )
 
     def _cache_and_set_props(self, bodies):
         """ """
@@ -757,6 +688,75 @@ class IsaacGym(Simulator):
                 ),
                 (13, 13, 1),
             )[self._rigid_body_indices[body.name]]
+
+    def _acquire_physics_state_tensors(self):
+        """ """
+        actor_root_state = self._gym.acquire_actor_root_state_tensor(self._sim)
+        dof_state = self._gym.acquire_dof_state_tensor(self._sim)
+        rigid_body_state = self._gym.acquire_rigid_body_state_tensor(self._sim)
+
+        self._gym.refresh_actor_root_state_tensor(self._sim)
+        self._gym.refresh_dof_state_tensor(self._sim)
+
+        self._actor_root_state = gymtorch.wrap_tensor(actor_root_state)
+        self._dof_state = gymtorch.wrap_tensor(dof_state)
+        self._rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)
+
+        if self._actor_root_state is None:
+            self._initial_actor_root_state = None
+        else:
+            self._initial_actor_root_state = self._actor_root_state.clone()
+        if self._dof_state is None:
+            self._initial_dof_state = None
+        else:
+            self._initial_dof_state = self._dof_state.clone()
+
+    def _set_viewer(self):
+        """ """
+        self._enable_viewer_sync = True
+        self._viewer = None
+
+        if self._cfg.RENDER:
+            self._viewer = self._gym.create_viewer(self._sim, gymapi.CameraProperties())
+            self._gym.subscribe_viewer_keyboard_event(self._viewer, gymapi.KEY_ESCAPE, "quit")
+            self._gym.subscribe_viewer_keyboard_event(
+                self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
+            )
+
+            axes_geom = gymutil.AxesGeometry(1.0)
+            for env_ptr in self._envs:
+                gymutil.draw_lines(axes_geom, self._gym, self._viewer, env_ptr, gymapi.Transform())
+
+            if (
+                self._cfg.INIT_VIEWER_CAMERA_POSITION
+                != (
+                    None,
+                    None,
+                    None,
+                )
+                and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None)
+            ):
+                cam_pos = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_POSITION)
+                cam_target = gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_TARGET)
+
+                self._gym.viewer_camera_look_at(self._viewer, None, cam_pos, cam_target)
+
+    def _allocate_buffers(self):
+        """ """
+        if self._dof_state is None:
+            self._dof_position_target_buffer = None
+            self._dof_velocity_target_buffer = None
+            self._dof_actuation_force_buffer = None
+        else:
+            self._dof_position_target_buffer = torch.zeros(
+                len(self._dof_state), dtype=torch.float32, device=self._device
+            )
+            self._dof_velocity_target_buffer = torch.zeros(
+                len(self._dof_state), dtype=torch.float32, device=self._device
+            )
+            self._dof_actuation_force_buffer = torch.zeros(
+                len(self._dof_state), dtype=torch.float32, device=self._device
+            )
 
     def _reset_idx(self, bodies, env_ids):
         """ """
