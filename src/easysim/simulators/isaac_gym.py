@@ -715,9 +715,9 @@ class IsaacGym(Simulator):
                     (2, 2, 1),
                 )[self._dof_indices[body.name]]
             else:
-                body.dof_state = torch.zeros(
+                body.dof_state = self._dof_state.new_zeros(
                     (self._num_envs, self._asset_num_dofs[body.name], 2)
-                ).to(self._dof_state)
+                )
                 body.dof_state[body.env_ids_load] = torch.as_strided(
                     self._dof_state,
                     (
@@ -745,9 +745,9 @@ class IsaacGym(Simulator):
                 (13, 13, 1),
             )[self._rigid_body_indices[body.name]]
         else:
-            body.link_state = torch.zeros(
+            body.link_state = self._rigid_body_state.new_zeros(
                 (self._num_envs, self._asset_num_rigid_bodies[body.name], 13)
-            ).to(self._rigid_body_state)
+            )
             body.link_state[body.env_ids_load] = torch.as_strided(
                 self._rigid_body_state,
                 (
