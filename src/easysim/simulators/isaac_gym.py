@@ -181,7 +181,7 @@ class IsaacGym(Simulator):
     def _load_ground_plane(self):
         """ """
         plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
+        plane_params.normal = gymapi.Vec3(x=0.0, y=0.0, z=1.0)
         plane_params.distance = self._cfg.GROUND_PLANE.DISTANCE
         self._gym.add_ground(self._sim, plane_params)
 
@@ -288,8 +288,8 @@ class IsaacGym(Simulator):
 
     def _create_envs(self, num_envs, spacing, num_per_row):
         """ """
-        lower = gymapi.Vec3(-spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(+spacing, +spacing, spacing)
+        lower = gymapi.Vec3(x=-spacing, y=-spacing, z=0.0)
+        upper = gymapi.Vec3(x=+spacing, y=+spacing, z=spacing)
 
         self._envs = []
 
