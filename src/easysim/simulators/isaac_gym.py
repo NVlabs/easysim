@@ -46,7 +46,7 @@ class IsaacGym(Simulator):
         "dof_armature",
     )
     _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
-    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector")
+    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector", "orientation")
     _MESH_NORMAL_MODE_MAP = {
         MeshNormalMode.FROM_ASSET: gymapi.FROM_ASSET,
         MeshNormalMode.COMPUTE_PER_VERTEX: gymapi.COMPUTE_PER_VERTEX,
@@ -808,12 +808,29 @@ class IsaacGym(Simulator):
         for attr in ("up_vector",):
             if getattr(camera, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Isaac Gym: '{camera.name}'")
-        self._gym.set_camera_location(
-            self._camera_handles[idx][camera.name],
-            self._envs[idx],
-            gymapi.Vec3(*camera.get_attr_array("position", idx)),
-            gymapi.Vec3(*camera.get_attr_array("target", idx)),
-        )
+        if camera.target is not None:
+            self._gym.set_camera_location(
+                self._camera_handles[idx][camera.name],
+                self._envs[idx],
+                gymapi.Vec3(*camera.get_attr_array("position", idx)),
+                gymapi.Vec3(*camera.get_attr_array("target", idx)),
+            )
+        elif camera.orientation is not None:
+            # A rotation offset is required for gymapi.UP_AXIS_Z.
+            self._gym.set_camera_transform(
+                self._camera_handles[idx][camera.name],
+                self._envs[idx],
+                gymapi.Transform(
+                    p=gymapi.Vec3(*camera.get_attr_array("position", idx)),
+                    r=gymapi.Quat(*camera.get_attr_array("orientation", idx))
+                    * gymapi.Quat(x=-0.5, y=+0.5, z=+0.5, w=+0.5),
+                ),
+            )
+        else:
+            raise ValueError(
+                "For Isaac Gym, either 'target' or 'orientation' is required to be set: "
+                f"{camera.name}"
+            )
 
     def _set_callback_camera(self):
         """ """

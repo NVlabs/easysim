@@ -31,7 +31,7 @@ class Bullet(Simulator):
         "dof_upper_limit",
     )
     _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
-    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector")
+    _ATTR_VIEW_MATRIX = ("position", "target", "up_vector", "orientation")
     _DOF_CONTROL_MODE_MAP = {
         DoFControlMode.POSITION_CONTROL: pybullet.POSITION_CONTROL,
         DoFControlMode.VELOCITY_CONTROL: pybullet.VELOCITY_CONTROL,
@@ -625,11 +625,26 @@ class Bullet(Simulator):
 
     def _set_view_matrix(self, camera):
         """ """
-        self._view_matrix[camera.name] = self._p.computeViewMatrix(
-            camera.get_attr_array("position", 0),
-            camera.get_attr_array("target", 0),
-            camera.get_attr_array("up_vector", 0),
-        )
+        if camera.target is not None and camera.up_vector is not None:
+            self._view_matrix[camera.name] = self._p.computeViewMatrix(
+                camera.get_attr_array("position", 0),
+                camera.get_attr_array("target", 0),
+                camera.get_attr_array("up_vector", 0),
+            )
+        elif camera.orientation is not None:
+            R = np.array(
+                self._p.getMatrixFromQuaternion(camera.get_attr_array("orientation", 0)),
+                dtype=np.float32,
+            ).reshape(3, 3)
+            view_matrix = np.eye(4, dtype=np.float32)
+            view_matrix[:3, :3] = R
+            view_matrix[3, :3] = -1 * camera.get_attr_array("position", 0).dot(R)
+            self._view_matrix[camera.name] = tuple(view_matrix.flatten())
+        else:
+            raise ValueError(
+                "For Bullet, either ('target', 'up_vector') or 'orientation' is required to be "
+                f"set: {camera.name}"
+            )
 
     def _clear_image_cache(self, camera):
         """ """

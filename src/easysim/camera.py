@@ -20,6 +20,7 @@ class Camera:
         "position": 1,
         "target": 1,
         "up_vector": 1,
+        "orientation": 1,
     }
 
     _created = False
@@ -36,6 +37,7 @@ class Camera:
         position=None,
         target=None,
         up_vector=None,
+        orientation=None,
     ):
         """ """
         self._init_attr_array_pipeline()
@@ -53,6 +55,7 @@ class Camera:
         self.position = position
         self.target = target
         self.up_vector = up_vector
+        self.orientation = orientation
 
         self.color = None
         self.depth = None
@@ -279,6 +282,10 @@ class Camera:
             "target"
         ], "'target' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
+            if self.orientation is not None:
+                raise ValueError(
+                    "('target', 'up_vector') and 'orientation' cannot both be set at the same time"
+                )
             value = np.asanyarray(value, dtype=np.float32)
             if value.ndim not in (
                 self._ATTR_ARRAY_NDIM["target"],
@@ -305,6 +312,10 @@ class Camera:
             "'update_attr_array()'."
         )
         if value is not None:
+            if self.orientation is not None:
+                raise ValueError(
+                    "('target', 'up_vector') and 'orientation' cannot both be set at the same time"
+                )
             value = np.asanyarray(value, dtype=np.float32)
             if value.ndim not in (
                 self._ATTR_ARRAY_NDIM["up_vector"],
@@ -318,6 +329,37 @@ class Camera:
             if value.shape[-1] != 3:
                 raise ValueError("'up_vector' must have the last dimension of size 3")
         self._up_vector = value
+
+    @property
+    def orientation(self):
+        """ """
+        return self._orientation
+
+    @orientation.setter
+    def orientation(self, value):
+        """ """
+        assert not self._attr_array_locked["orientation"], (
+            "'orientation' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            if self.target is not None or self.up_vector is not None:
+                raise ValueError(
+                    "('target', 'up_vector') and 'orientation' cannot both be set at the same time"
+                )
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["orientation"],
+                self._ATTR_ARRAY_NDIM["orientation"] + 1,
+            ):
+                raise ValueError(
+                    "'orientation' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['orientation']} or "
+                    f"{self._ATTR_ARRAY_NDIM['orientation'] + 1}"
+                )
+            if value.shape[-1] != 4:
+                raise ValueError("'orientation' must have the last dimension of size 4")
+        self._orientation = value
 
     @property
     def color(self):
