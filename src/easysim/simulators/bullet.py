@@ -5,6 +5,7 @@
 import pybullet
 import pybullet_utils.bullet_client as bullet_client
 import pybullet_data
+import pkgutil
 import numpy as np
 import time
 
@@ -60,6 +61,16 @@ class Bullet(Simulator):
             else:
                 self._p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
             self._p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+            self._plugins = {}
+
+            if self._cfg.BULLET.USE_EGL:
+                if self._cfg.RENDER:
+                    raise ValueError("USE_EGL can only be True when RENDER is set to False")
+                egl = pkgutil.get_loader("eglRenderer")
+                self._plugins["egl_renderer"] = self._p.loadPlugin(
+                    egl.get_filename(), "_eglRendererPlugin"
+                )
 
         with self._disable_cov_rendering():
             self._p.resetSimulation()
@@ -1119,5 +1130,7 @@ class Bullet(Simulator):
     def close(self):
         """ """
         if self._connected:
+            for name in self._plugins:
+                self._p.unloadPlugin(self._plugins[name])
             self._p.disconnect()
             self._connected = False
