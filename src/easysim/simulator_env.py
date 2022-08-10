@@ -32,6 +32,11 @@ class SimulatorEnv(gym.Env, abc.ABC):
         """ """
         return self._scene
 
+    @property
+    def simulator(self):
+        """ """
+        return self._simulator
+
     @abc.abstractmethod
     def init(self, **kwargs):
         """ """
