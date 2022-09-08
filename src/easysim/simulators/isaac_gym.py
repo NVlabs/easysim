@@ -191,11 +191,8 @@ class IsaacGym(Simulator):
         self._asset_num_dofs = {}
         self._asset_num_rigid_bodies = {}
         self._asset_num_rigid_shapes = {}
-        self._asset_rigid_body_mapping = {-1: [0, 0]}
 
-        counter_rigid_body = 0
-
-        for b, body in enumerate(self._scene.bodies):
+        for body in self._scene.bodies:
             asset_options = gymapi.AssetOptions()
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
@@ -282,10 +279,6 @@ class IsaacGym(Simulator):
                 self._assets[body.name]
             )
 
-            for i in range(self._asset_num_rigid_bodies[body.name]):
-                self._asset_rigid_body_mapping[counter_rigid_body + i] = [b, i]
-            counter_rigid_body += self._asset_num_rigid_bodies[body.name]
-
     def _create_envs(self, num_envs, spacing, num_per_row):
         """ """
         lower = gymapi.Vec3(x=-spacing, y=-spacing, z=0.0)
@@ -304,6 +297,7 @@ class IsaacGym(Simulator):
         counter_dof = 0
         counter_rigid_body = 0
 
+        self._actor_rigid_body_mapping = [{-1: [0, 0]} for _ in range(num_envs)]
         contact_id = {body.name: [] for body in self._scene.bodies}
 
         if len(self._scene.cameras) > 0 and not self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
@@ -314,25 +308,26 @@ class IsaacGym(Simulator):
         self._camera_handles = [{} for _ in range(num_envs)]
         self._camera_image_buffer = [{} for _ in range(num_envs)]
 
-        for i in range(num_envs):
+        for idx in range(num_envs):
             env_ptr = self._gym.create_env(self._sim, lower, upper, num_per_row)
 
-            counter_body = 0
+            counter_env_actor = 0
+            counter_env_rigid_body = 0
 
             for body in self._scene.bodies:
-                if body.env_ids_load is not None and i not in body.env_ids_load:
-                    self._actor_indices[i].append(-1)
+                if body.env_ids_load is not None and idx not in body.env_ids_load:
+                    self._actor_indices[idx].append(-1)
                     if not self._actor_indices_need_filter:
                         self._actor_indices_need_filter = True
                     contact_id[body.name].append(-2)
                     continue
 
                 actor_handle = self._gym.create_actor(
-                    env_ptr, self._assets[body.name], gymapi.Transform(), name=body.name, group=i
+                    env_ptr, self._assets[body.name], gymapi.Transform(), name=body.name, group=idx
                 )
                 actor_index = self._gym.get_actor_index(env_ptr, actor_handle, gymapi.DOMAIN_SIM)
-                self._actor_handles[i][body.name] = actor_handle
-                self._actor_indices[i].append(actor_index)
+                self._actor_handles[idx][body.name] = actor_handle
+                self._actor_indices[idx].append(actor_index)
 
                 self._actor_root_indices[body.name].append(counter_actor)
                 self._dof_indices[body.name].append(counter_dof)
@@ -341,11 +336,17 @@ class IsaacGym(Simulator):
                 counter_dof += self._asset_num_dofs[body.name]
                 counter_rigid_body += self._asset_num_rigid_bodies[body.name]
 
-                contact_id[body.name].append(counter_body)
-                counter_body += 1
+                for i in range(self._asset_num_rigid_bodies[body.name]):
+                    self._actor_rigid_body_mapping[idx][counter_env_rigid_body + i] = [
+                        counter_env_actor,
+                        i,
+                    ]
+                contact_id[body.name].append(counter_env_actor)
+                counter_env_actor += 1
+                counter_env_rigid_body += self._asset_num_rigid_bodies[body.name]
 
             for camera in self._scene.cameras:
-                camera_props = self._make_camera_props(camera, i)
+                camera_props = self._make_camera_props(camera, idx)
                 camera_handle = self._gym.create_camera_sensor(env_ptr, camera_props)
 
                 color = self._gym.get_camera_image_gpu_tensor(
@@ -358,11 +359,11 @@ class IsaacGym(Simulator):
                     self._sim, env_ptr, camera_handle, gymapi.IMAGE_SEGMENTATION
                 )
 
-                self._camera_handles[i][camera.name] = camera_handle
-                self._camera_image_buffer[i][camera.name] = {}
-                self._camera_image_buffer[i][camera.name]["color"] = gymtorch.wrap_tensor(color)
-                self._camera_image_buffer[i][camera.name]["depth"] = gymtorch.wrap_tensor(depth)
-                self._camera_image_buffer[i][camera.name]["segmentation"] = gymtorch.wrap_tensor(
+                self._camera_handles[idx][camera.name] = camera_handle
+                self._camera_image_buffer[idx][camera.name] = {}
+                self._camera_image_buffer[idx][camera.name]["color"] = gymtorch.wrap_tensor(color)
+                self._camera_image_buffer[idx][camera.name]["depth"] = gymtorch.wrap_tensor(depth)
+                self._camera_image_buffer[idx][camera.name]["segmentation"] = gymtorch.wrap_tensor(
                     segmentation
                 )
 
@@ -1555,17 +1556,17 @@ class IsaacGym(Simulator):
     def _collect_contact(self):
         """ """
         contact = []
-        for env in self._envs:
+        for idx, env in enumerate(self._envs):
             rigid_contacts = self._gym.get_env_rigid_contacts(env)
             if len(rigid_contacts) == 0:
                 contact_array = create_contact_array(0)
             else:
                 kwargs = {}
                 kwargs["body_id_a"], kwargs["link_id_a"] = zip(
-                    *[self._asset_rigid_body_mapping[x] for x in rigid_contacts["body0"]]
+                    *[self._actor_rigid_body_mapping[idx][x] for x in rigid_contacts["body0"]]
                 )
                 kwargs["body_id_b"], kwargs["link_id_b"] = zip(
-                    *[self._asset_rigid_body_mapping[x] for x in rigid_contacts["body1"]]
+                    *[self._actor_rigid_body_mapping[idx][x] for x in rigid_contacts["body1"]]
                 )
                 kwargs["position_a_world"] = np.nan
                 kwargs["position_b_world"] = np.nan
