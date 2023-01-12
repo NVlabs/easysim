@@ -1000,15 +1000,11 @@ class IsaacGym(Simulator):
                 self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
             )
 
-            if (
-                self._cfg.INIT_VIEWER_CAMERA_POSITION
-                != (
-                    None,
-                    None,
-                    None,
-                )
-                and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None)
-            ):
+            if self._cfg.INIT_VIEWER_CAMERA_POSITION != (
+                None,
+                None,
+                None,
+            ) and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None):
                 self._gym.viewer_camera_look_at(
                     self._viewer,
                     None,
