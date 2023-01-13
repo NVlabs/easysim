@@ -153,7 +153,13 @@ class Bullet(Simulator):
                     f"For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
                 )
 
-        for attr in ("vhacd_enabled", "vhacd_params", "mesh_normal_mode"):
+        for attr in (
+            "flip_visual_attachments",
+            "disable_gravity",
+            "vhacd_enabled",
+            "vhacd_params",
+            "mesh_normal_mode",
+        ):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
         kwargs = {}

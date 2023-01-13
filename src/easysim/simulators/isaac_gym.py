@@ -194,6 +194,8 @@ class IsaacGym(Simulator):
 
         for body in self._scene.bodies:
             asset_options = gymapi.AssetOptions()
+            if body.flip_visual_attachments is not None:
+                asset_options.flip_visual_attachments = body.flip_visual_attachments
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
             if body.use_self_collision is not None:
@@ -215,6 +217,8 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.angular_damping = body.link_angular_damping
+            if body.disable_gravity is not None:
+                asset_options.disable_gravity = body.disable_gravity
             asset_options.override_com = True
             asset_options.override_inertia = True
             if body.vhacd_enabled is not None:

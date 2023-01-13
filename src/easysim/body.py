@@ -54,6 +54,8 @@ class Body:
         device=None,
         use_fixed_base=None,
         use_self_collision=None,
+        flip_visual_attachments=None,
+        disable_gravity=None,
         vhacd_enabled=None,
         vhacd_params=None,
         mesh_normal_mode=None,
@@ -97,6 +99,8 @@ class Body:
         self.device = device
         self.use_fixed_base = use_fixed_base
         self.use_self_collision = use_self_collision
+        self.disable_gravity = disable_gravity
+        self.flip_visual_attachments = flip_visual_attachments
         self.vhacd_enabled = vhacd_enabled
         self.vhacd_params = vhacd_params
         self.mesh_normal_mode = mesh_normal_mode
@@ -291,6 +295,26 @@ class Body:
     def use_self_collision(self, value):
         """ """
         self._use_self_collision = value
+
+    @property
+    def disable_gravity(self):
+        """ """
+        return self._disable_gravity
+
+    @disable_gravity.setter
+    def disable_gravity(self, value):
+        """ """
+        self._disable_gravity = value
+
+    @property
+    def flip_visual_attachments(self):
+        """ """
+        return self._flip_visual_attachments
+
+    @flip_visual_attachments.setter
+    def flip_visual_attachments(self, value):
+        """ """
+        self._flip_visual_attachments = value
 
     @property
     def vhacd_enabled(self):
