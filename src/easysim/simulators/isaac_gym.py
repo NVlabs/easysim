@@ -194,15 +194,12 @@ class IsaacGym(Simulator):
 
         for body in self._scene.bodies:
             asset_options = gymapi.AssetOptions()
-            if body.flip_visual_attachments is not None:
-                asset_options.flip_visual_attachments = body.flip_visual_attachments
+            if body.isaac_gym_config.flip_visual_attachments is not None:
+                asset_options.flip_visual_attachments = (
+                    body.isaac_gym_config.flip_visual_attachments
+                )
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
-            if body.use_self_collision is not None:
-                raise ValueError(
-                    "For Isaac Gym, keep 'use_self_collision' to None and set self-collision with "
-                    f"'collision_filter' (0: enabled): '{body.name}'"
-                )
             if body.link_linear_damping is not None:
                 if body.link_linear_damping.ndim != 0:
                     raise ValueError(
@@ -217,18 +214,22 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.angular_damping = body.link_angular_damping
-            if body.disable_gravity is not None:
-                asset_options.disable_gravity = body.disable_gravity
+            if body.isaac_gym_config.disable_gravity is not None:
+                asset_options.disable_gravity = body.isaac_gym_config.disable_gravity
             asset_options.override_com = True
             asset_options.override_inertia = True
-            if body.vhacd_enabled is not None:
-                asset_options.vhacd_enabled = body.vhacd_enabled
-            if body.vhacd_params is not None:
-                for attr in body.vhacd_params:
-                    setattr(asset_options.vhacd_params, attr, body.vhacd_params[attr])
+            if body.isaac_gym_config.vhacd_enabled is not None:
+                asset_options.vhacd_enabled = body.isaac_gym_config.vhacd_enabled
+            if body.isaac_gym_config.vhacd_params is not None:
+                for attr in body.isaac_gym_config.vhacd_params:
+                    setattr(
+                        asset_options.vhacd_params, attr, body.isaac_gym_config.vhacd_params[attr]
+                    )
             asset_options.use_mesh_materials = True
-            if body.mesh_normal_mode is not None:
-                asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[body.mesh_normal_mode]
+            if body.isaac_gym_config.mesh_normal_mode is not None:
+                asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[
+                    body.isaac_gym_config.mesh_normal_mode
+                ]
 
             if body.geometry_type is None:
                 raise ValueError(f"For Isaac Gym, 'geometry_type' must not be None: '{body.name}'")

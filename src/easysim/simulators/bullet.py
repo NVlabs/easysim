@@ -153,17 +153,11 @@ class Bullet(Simulator):
                     f"For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
                 )
 
-        for attr in (
-            "flip_visual_attachments",
-            "disable_gravity",
-            "vhacd_enabled",
-            "vhacd_params",
-            "mesh_normal_mode",
-        ):
-            if getattr(body, attr) is not None:
-                raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
         kwargs = {}
-        if body.use_self_collision is not None and body.use_self_collision:
+        if (
+            body.bullet_config.use_self_collision is not None
+            and body.bullet_config.use_self_collision
+        ):
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         if body.geometry_type is None:
             raise ValueError(f"For Bullet, 'geometry_type' must not be None: '{body.name}'")

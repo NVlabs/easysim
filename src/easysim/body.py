@@ -53,12 +53,8 @@ class Body:
         box_half_extent=None,
         device=None,
         use_fixed_base=None,
-        use_self_collision=None,
-        flip_visual_attachments=None,
-        disable_gravity=None,
-        vhacd_enabled=None,
-        vhacd_params=None,
-        mesh_normal_mode=None,
+        bullet_config=dict(),
+        isaac_gym_config=dict(),
         env_ids_load=None,
         initial_base_position=None,
         initial_base_velocity=None,
@@ -98,12 +94,8 @@ class Body:
         self.box_half_extent = box_half_extent
         self.device = device
         self.use_fixed_base = use_fixed_base
-        self.use_self_collision = use_self_collision
-        self.disable_gravity = disable_gravity
-        self.flip_visual_attachments = flip_visual_attachments
-        self.vhacd_enabled = vhacd_enabled
-        self.vhacd_params = vhacd_params
-        self.mesh_normal_mode = mesh_normal_mode
+        self.bullet_config = BulletConfig(**bullet_config)
+        self.isaac_gym_config = IsaacGymConfig(**isaac_gym_config)
         self.env_ids_load = env_ids_load
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
@@ -285,66 +277,6 @@ class Body:
     def use_fixed_base(self, value):
         """ """
         self._use_fixed_base = value
-
-    @property
-    def use_self_collision(self):
-        """ """
-        return self._use_self_collision
-
-    @use_self_collision.setter
-    def use_self_collision(self, value):
-        """ """
-        self._use_self_collision = value
-
-    @property
-    def disable_gravity(self):
-        """ """
-        return self._disable_gravity
-
-    @disable_gravity.setter
-    def disable_gravity(self, value):
-        """ """
-        self._disable_gravity = value
-
-    @property
-    def flip_visual_attachments(self):
-        """ """
-        return self._flip_visual_attachments
-
-    @flip_visual_attachments.setter
-    def flip_visual_attachments(self, value):
-        """ """
-        self._flip_visual_attachments = value
-
-    @property
-    def vhacd_enabled(self):
-        """ """
-        return self._vhacd_enabled
-
-    @vhacd_enabled.setter
-    def vhacd_enabled(self, value):
-        """ """
-        self._vhacd_enabled = value
-
-    @property
-    def vhacd_params(self):
-        """ """
-        return self._vhacd_params
-
-    @vhacd_params.setter
-    def vhacd_params(self, value):
-        """ """
-        self._vhacd_params = value
-
-    @property
-    def mesh_normal_mode(self):
-        """ """
-        return self._mesh_normal_mode
-
-    @mesh_normal_mode.setter
-    def mesh_normal_mode(self, value):
-        """ """
-        self._mesh_normal_mode = value
 
     @property
     def env_ids_load(self):
@@ -1118,3 +1050,110 @@ class Body:
     def set_callback_collect_link_state(self, callback):
         """ """
         self._callback_collect_link_state = callback
+
+
+class BulletConfig:
+    """ """
+
+    _created = False
+
+    def __init__(self, use_self_collision=None):
+        """ """
+        self.use_self_collision = use_self_collision
+
+        self._created = True
+
+    def __setattr__(self, key, value):
+        """ """
+        if self._created and not hasattr(self, key):
+            raise TypeError(f"Unrecognized BulletConfig attribute '{key}'")
+        object.__setattr__(self, key, value)
+
+    @property
+    def use_self_collision(self):
+        """ """
+        return self._use_self_collision
+
+    @use_self_collision.setter
+    def use_self_collision(self, value):
+        """ """
+        self._use_self_collision = value
+
+
+class IsaacGymConfig:
+    """ """
+
+    _created = False
+
+    def __init__(
+        self,
+        disable_gravity=None,
+        flip_visual_attachments=None,
+        vhacd_enabled=None,
+        vhacd_params=None,
+        mesh_normal_mode=None,
+    ):
+        """ """
+        self.disable_gravity = disable_gravity
+        self.flip_visual_attachments = flip_visual_attachments
+        self.vhacd_enabled = vhacd_enabled
+        self.vhacd_params = vhacd_params
+        self.mesh_normal_mode = mesh_normal_mode
+
+        self._created = True
+
+    def __setattr__(self, key, value):
+        """ """
+        if self._created and not hasattr(self, key):
+            raise TypeError(f"Unrecognized IsaacGymConfig attribute '{key}'")
+        object.__setattr__(self, key, value)
+
+    @property
+    def disable_gravity(self):
+        """ """
+        return self._disable_gravity
+
+    @disable_gravity.setter
+    def disable_gravity(self, value):
+        """ """
+        self._disable_gravity = value
+
+    @property
+    def flip_visual_attachments(self):
+        """ """
+        return self._flip_visual_attachments
+
+    @flip_visual_attachments.setter
+    def flip_visual_attachments(self, value):
+        """ """
+        self._flip_visual_attachments = value
+
+    @property
+    def vhacd_enabled(self):
+        """ """
+        return self._vhacd_enabled
+
+    @vhacd_enabled.setter
+    def vhacd_enabled(self, value):
+        """ """
+        self._vhacd_enabled = value
+
+    @property
+    def vhacd_params(self):
+        """ """
+        return self._vhacd_params
+
+    @vhacd_params.setter
+    def vhacd_params(self, value):
+        """ """
+        self._vhacd_params = value
+
+    @property
+    def mesh_normal_mode(self):
+        """ """
+        return self._mesh_normal_mode
+
+    @mesh_normal_mode.setter
+    def mesh_normal_mode(self, value):
+        """ """
+        self._mesh_normal_mode = value
