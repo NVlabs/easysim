@@ -150,7 +150,7 @@ class Body:
         """ """
         # Exclude `dof_state` and `link_state` to prevent infinite recursion in property calls.
         if self._created and key not in ("dof_state", "link_state") and not hasattr(self, key):
-            raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
+            raise TypeError(f"Unrecognized Body attribute '{key}'")
         object.__setattr__(self, key, value)
 
     def _init_attr_array_pipeline(self):

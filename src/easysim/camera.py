@@ -72,7 +72,7 @@ class Camera:
             and key not in ("color", "depth", "segmentation")
             and not hasattr(self, key)
         ):
-            raise TypeError(f"Unrecognized Body attribute '{key}': {self.name}")
+            raise TypeError(f"Unrecognized Camera attribute '{key}'")
         object.__setattr__(self, key, value)
 
     def _init_attr_array_pipeline(self):
