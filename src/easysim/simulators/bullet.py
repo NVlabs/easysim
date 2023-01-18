@@ -432,6 +432,9 @@ class Bullet(Simulator):
             if body.dof_upper_limit is None:
                 body.dof_upper_limit = [[x[9] for x in joint_info]]
                 body.attr_array_default_flag["dof_upper_limit"] = True
+            if body.dof_max_velocity is None:
+                body.dof_max_velocity = [[x[11] for x in joint_info]]
+                body.attr_array_default_flag["dof_max_velocity"] = True
 
         body.lock_attr_array()
 
