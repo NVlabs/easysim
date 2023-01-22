@@ -71,12 +71,12 @@ class IsaacGym(Simulator):
             self._sim_device_id = 0
 
         self._device = "cpu"
-        if self._cfg.ISAAC_GYM.USE_GPU_PIPELINE:
+        if self._cfg.USE_GPU_PIPELINE:
             if sim_device_type == "cuda":
                 self._device = "cuda:" + str(self._sim_device_id)
             else:
                 print("GPU pipeline can only be used with GPU simulation. Forcing CPU pipeline.")
-                self._cfg.ISAAC_GYM.USE_GPU_PIPELINE = False
+                self._cfg.USE_GPU_PIPELINE = False
 
         if (
             not self._cfg.RENDER
@@ -97,7 +97,7 @@ class IsaacGym(Simulator):
         self._last_render_time = 0.0
         self._counter_render = 0
         self._render_time_step = max(
-            1.0 / self._cfg.ISAAC_GYM.RENDER_FRAME_RATE, self._cfg.TIME_STEP
+            1.0 / self._cfg.ISAAC_GYM.VIEWER.RENDER_FRAME_RATE, self._cfg.TIME_STEP
         )
         self._render_steps = self._render_time_step / self._cfg.TIME_STEP
 
@@ -113,7 +113,7 @@ class IsaacGym(Simulator):
             sim_params.substeps = cfg.SUBSTEPS
         sim_params.gravity = gymapi.Vec3(*cfg.GRAVITY)
         sim_params.up_axis = gymapi.UP_AXIS_Z
-        sim_params.use_gpu_pipeline = cfg.ISAAC_GYM.USE_GPU_PIPELINE
+        sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
 
         sim_params.physx.use_gpu = sim_device_type == "cuda"
         sim_params.physx.max_depenetration_velocity = cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
@@ -133,7 +133,7 @@ class IsaacGym(Simulator):
                 self._sim_params,
             )
 
-            if self._cfg.GROUND_PLANE.LOAD:
+            if self._cfg.LOAD_GROUND_PLANE:
                 self._load_ground_plane()
             self._load_assets()
             self._create_envs(
@@ -1005,19 +1005,19 @@ class IsaacGym(Simulator):
                 self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
             )
 
-            if self._cfg.INIT_VIEWER_CAMERA_POSITION != (
+            if self._cfg.VIEWER.INIT_CAMERA_POSITION != (
                 None,
                 None,
                 None,
-            ) and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None):
+            ) and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None):
                 self._gym.viewer_camera_look_at(
                     self._viewer,
                     None,
-                    gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_POSITION),
-                    gymapi.Vec3(*self._cfg.INIT_VIEWER_CAMERA_TARGET),
+                    gymapi.Vec3(*self._cfg.VIEWER.INIT_CAMERA_POSITION),
+                    gymapi.Vec3(*self._cfg.VIEWER.INIT_CAMERA_TARGET),
                 )
 
-            if self._cfg.DRAW_VIEWER_AXES:
+            if self._cfg.ISAAC_GYM.VIEWER.DRAW_AXES:
                 axes_geom = gymutil.AxesGeometry(1.0)
                 for env_ptr in self._envs:
                     gymutil.draw_lines(

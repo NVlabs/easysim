@@ -4,7 +4,7 @@
 
 import argparse
 
-from easysim.config import get_cfg
+from easysim.config.config import get_cfg
 
 
 def parse_config_args():

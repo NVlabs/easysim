@@ -43,12 +43,12 @@ class Bullet(Simulator):
         """ """
         super().__init__(cfg, scene)
 
-        if not self._cfg.DRAW_VIEWER_AXES:
-            raise ValueError("DRAW_VIEWER_AXES must be True for Bullet")
         if self._cfg.NUM_ENVS != 1:
             raise ValueError("NUM_ENVS must be 1 for Bullet")
         if self._cfg.SIM_DEVICE != "cpu":
             raise ValueError("SIM_DEVICE must be 'cpu' for Bullet")
+        if self._cfg.USE_GPU_PIPELINE:
+            raise ValueError("USE_GPU_PIPELINE must be False for Bullet")
 
         self._connected = False
         self._last_frame_time = 0.0
@@ -85,7 +85,7 @@ class Bullet(Simulator):
                 )
             self._p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
 
-            if self._cfg.GROUND_PLANE.LOAD:
+            if self._cfg.LOAD_GROUND_PLANE:
                 self._body_id_ground_plane = self._load_ground_plane()
 
             self._scene_cache = type(self._scene)()
@@ -112,11 +112,11 @@ class Bullet(Simulator):
 
             if (
                 self._cfg.RENDER
-                and self._cfg.INIT_VIEWER_CAMERA_POSITION != (None, None, None)
-                and self._cfg.INIT_VIEWER_CAMERA_TARGET != (None, None, None)
+                and self._cfg.VIEWER.INIT_CAMERA_POSITION != (None, None, None)
+                and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None)
             ):
                 self._set_viewer_camera_pose(
-                    self._cfg.INIT_VIEWER_CAMERA_POSITION, self._cfg.INIT_VIEWER_CAMERA_TARGET
+                    self._cfg.VIEWER.INIT_CAMERA_POSITION, self._cfg.VIEWER.INIT_CAMERA_TARGET
                 )
 
         if not self._connected:
