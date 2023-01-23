@@ -307,7 +307,7 @@ class IsaacGym(Simulator):
 
         if len(self._scene.cameras) > 0 and not self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
             raise ValueError(
-                "For Isaac Gym, ISAAC_GYM.ENABLE_CAMERA_SENSORS must be True if any cameras is used"
+                "For Isaac Gym, ENABLE_CAMERA_SENSORS must be True if any cameras is used"
             )
 
         self._camera_handles = [{} for _ in range(num_envs)]
