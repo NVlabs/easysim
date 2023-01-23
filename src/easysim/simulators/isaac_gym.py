@@ -1018,6 +1018,11 @@ class IsaacGym(Simulator):
                 )
 
             if self._cfg.ISAAC_GYM.VIEWER.DRAW_AXES:
+                if len(self._scene.cameras) > 0:
+                    raise ValueError(
+                        "For Isaac Gym, set DRAW_AXES to False if opening the viewer with cameras, "
+                        "since the drawn axes cannot be hidden in camera's rendered images."
+                    )
                 axes_geom = gymutil.AxesGeometry(1.0)
                 for env_ptr in self._envs:
                     gymutil.draw_lines(
