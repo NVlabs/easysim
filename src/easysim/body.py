@@ -260,6 +260,8 @@ class Body:
         if hasattr(self, "_dof_force") and self.dof_force is not None:
             self.dof_force = self.dof_force.to(value)
 
+        if hasattr(self, "_env_ids_reset_base_state") and self.env_ids_reset_base_state is not None:
+            self.env_ids_reset_base_state = self.env_ids_reset_base_state.to(value)
         if hasattr(self, "_env_ids_reset_dof_state") and self.env_ids_reset_dof_state is not None:
             self.env_ids_reset_dof_state = self.env_ids_reset_dof_state.to(value)
 
