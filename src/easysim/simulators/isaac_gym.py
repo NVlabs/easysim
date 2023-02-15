@@ -78,11 +78,9 @@ class IsaacGym(Simulator):
                 print("GPU pipeline can only be used with GPU simulation. Forcing CPU pipeline.")
                 self._cfg.USE_GPU_PIPELINE = False
 
-        if (
-            not self._cfg.RENDER
-            and not self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS
-            and self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1
-        ):
+        if self._cfg.RENDER or self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
+            self._graphics_device = "cuda:" + str(self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID)
+        elif self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1:
             self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID = -1
 
         # Support only PhysX for now.
@@ -100,6 +98,11 @@ class IsaacGym(Simulator):
             1.0 / self._cfg.ISAAC_GYM.VIEWER.RENDER_FRAME_RATE, self._cfg.TIME_STEP
         )
         self._render_steps = self._render_time_step / self._cfg.TIME_STEP
+
+    @property
+    def device(self):
+        """ """
+        return self._device
 
     def _parse_sim_params(self, cfg, sim_device_type):
         """ """
@@ -142,10 +145,12 @@ class IsaacGym(Simulator):
 
             self._scene_cache = type(self._scene)()
             self._cache_body_and_set_props()
-            self._set_callback_body()
+            self._set_body_device()
+            self._set_body_callback()
             self._set_camera_props()
-            self._set_callback_camera()
-            self._set_callback_scene()
+            self._set_camera_device()
+            self._set_camera_callback()
+            self._set_scene_callback()
 
             self._gym.prepare_sim(self._sim)
             self._acquire_physics_state_tensors()
@@ -156,7 +161,7 @@ class IsaacGym(Simulator):
             self._created = True
 
         if env_ids is None:
-            env_ids = torch.arange(self._num_envs, device=self._device)
+            env_ids = torch.arange(self._num_envs, device=self.device)
 
         self._reset_idx(env_ids)
 
@@ -375,17 +380,17 @@ class IsaacGym(Simulator):
             self._envs.append(env_ptr)
 
         self._actor_indices = torch.tensor(
-            self._actor_indices, dtype=torch.int32, device=self._device
+            self._actor_indices, dtype=torch.int32, device=self.device
         )
         for body in self._scene.bodies:
             self._actor_root_indices[body.name] = torch.tensor(
-                self._actor_root_indices[body.name], dtype=torch.int64, device=self._device
+                self._actor_root_indices[body.name], dtype=torch.int64, device=self.device
             )
             self._dof_indices[body.name] = torch.tensor(
-                self._dof_indices[body.name], dtype=torch.int64, device=self._device
+                self._dof_indices[body.name], dtype=torch.int64, device=self.device
             )
             self._rigid_body_indices[body.name] = torch.tensor(
-                self._rigid_body_indices[body.name], dtype=torch.int64, device=self._device
+                self._rigid_body_indices[body.name], dtype=torch.int64, device=self.device
             )
             body.contact_id = contact_id[body.name]
 
@@ -716,7 +721,12 @@ class IsaacGym(Simulator):
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )
 
-    def _set_callback_body(self):
+    def _set_body_device(self):
+        """ """
+        for body in self._scene.bodies:
+            body.set_device(self.device)
+
+    def _set_body_callback(self):
         """ """
         for body in self._scene.bodies:
             body.set_callback_collect_dof_state(self._collect_dof_state)
@@ -838,7 +848,12 @@ class IsaacGym(Simulator):
                 f"{camera.name}"
             )
 
-    def _set_callback_camera(self):
+    def _set_camera_device(self):
+        """ """
+        for camera in self._scene.cameras:
+            camera.set_device(self._graphics_device)
+
+    def _set_camera_callback(self):
         """ """
         for camera in self._scene.cameras:
             camera.set_callback_render_color(self._render_color)
@@ -954,7 +969,7 @@ class IsaacGym(Simulator):
             self._gym.render_all_camera_sensors(self._sim)
             self._all_camera_rendered = True
 
-    def _set_callback_scene(self):
+    def _set_scene_callback(self):
         """ """
         self._scene.set_callback_add_camera(self._add_camera)
         self._scene.set_callback_remove_camera(self._remove_camera)
@@ -1037,13 +1052,13 @@ class IsaacGym(Simulator):
             self._dof_actuation_force_buffer = None
         else:
             self._dof_position_target_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
+                len(self._dof_state), dtype=torch.float32, device=self.device
             )
             self._dof_velocity_target_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
+                len(self._dof_state), dtype=torch.float32, device=self.device
             )
             self._dof_actuation_force_buffer = torch.zeros(
-                len(self._dof_state), dtype=torch.float32, device=self._device
+                len(self._dof_state), dtype=torch.float32, device=self.device
             )
 
     def _reset_idx(self, env_ids):
@@ -1512,7 +1527,7 @@ class IsaacGym(Simulator):
             )
 
         self._gym.simulate(self._sim)
-        if self._device == "cpu" or self._cfg.RENDER or self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
+        if self.device == "cpu" or self._cfg.RENDER or self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
             self._gym.fetch_results(self._sim, True)
 
         self._graphics_stepped = False

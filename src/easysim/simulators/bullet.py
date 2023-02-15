@@ -50,8 +50,16 @@ class Bullet(Simulator):
         if self._cfg.USE_GPU_PIPELINE:
             raise ValueError("USE_GPU_PIPELINE must be False for Bullet")
 
+        self._device = "cpu"
+        self._graphics_device = "cpu"
+
         self._connected = False
         self._last_frame_time = 0.0
+
+    @property
+    def device(self):
+        """ """
+        return self._device
 
     def reset(self, env_ids):
         """ """
@@ -97,7 +105,8 @@ class Bullet(Simulator):
             for body in self._scene.bodies:
                 self._load_body(body)
                 self._cache_body_and_set_control_and_props(body)
-                self._set_callback_body(body)
+                self._set_body_device(body)
+                self._set_body_callback(body)
 
             self._projection_matrix = {}
             self._view_matrix = {}
@@ -105,10 +114,11 @@ class Bullet(Simulator):
 
             for camera in self._scene.cameras:
                 self._load_camera(camera)
-                self._set_callback_camera(camera)
+                self._set_camera_device(camera)
+                self._set_camera_callback(camera)
 
             if not self._connected:
-                self._set_callback_scene()
+                self._set_scene_callback()
 
             if (
                 self._cfg.RENDER
@@ -586,7 +596,11 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, **{k: v[i] for k, v in kwargs.items()}
                 )
 
-    def _set_callback_body(self, body):
+    def _set_body_device(self, body):
+        """ """
+        body.set_device(self.device)
+
+    def _set_body_callback(self, body):
         """ """
         body.set_callback_collect_dof_state(self._collect_dof_state)
         body.set_callback_collect_link_state(self._collect_link_state)
@@ -666,7 +680,11 @@ class Bullet(Simulator):
         self._image_cache[camera.name]["depth"] = None
         self._image_cache[camera.name]["segmentation"] = None
 
-    def _set_callback_camera(self, camera):
+    def _set_camera_device(self, camera):
+        """ """
+        camera.set_device(self._graphics_device)
+
+    def _set_camera_callback(self, camera):
         """ """
         camera.set_callback_render_color(self._render_color)
         camera.set_callback_render_depth(self._render_depth)
@@ -746,7 +764,7 @@ class Bullet(Simulator):
             renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
         )
 
-    def _set_callback_scene(self):
+    def _set_scene_callback(self):
         """ """
         self._scene.set_callback_add_camera(self._add_camera)
         self._scene.set_callback_remove_camera(self._remove_camera)
@@ -754,7 +772,7 @@ class Bullet(Simulator):
     def _add_camera(self, camera):
         """ """
         self._load_camera(camera)
-        self._set_callback_camera(camera)
+        self._set_camera_callback(camera)
 
     def _remove_camera(self, camera):
         """ """
@@ -813,7 +831,8 @@ class Bullet(Simulator):
                 with self._disable_cov_rendering():
                     self._load_body(body)
                     self._cache_body_and_set_control_and_props(body)
-                    self._set_callback_body(body)
+                    self._set_body_device(body)
+                    self._set_body_callback(body)
 
         for body in self._scene.bodies:
             for attr in (

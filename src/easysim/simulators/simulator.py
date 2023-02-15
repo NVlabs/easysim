@@ -13,6 +13,11 @@ class Simulator(abc.ABC):
         self._cfg = cfg
         self._scene = scene
 
+    @property
+    @abc.abstractmethod
+    def device(self):
+        """ """
+
     @abc.abstractmethod
     def reset(self, env_ids):
         """ """

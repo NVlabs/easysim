@@ -51,7 +51,6 @@ class Body:
         urdf_file=None,
         sphere_radius=None,
         box_half_extent=None,
-        device=None,
         use_fixed_base=None,
         bullet_config=dict(),
         isaac_gym_config=dict(),
@@ -85,6 +84,7 @@ class Body:
     ):
         """ """
         self._init_attr_array_pipeline()
+        self._init_device()
         self._init_callback()
 
         self.name = name
@@ -92,7 +92,6 @@ class Body:
         self.urdf_file = urdf_file
         self.sphere_radius = sphere_radius
         self.box_half_extent = box_half_extent
-        self.device = device
         self.use_fixed_base = use_fixed_base
         self.bullet_config = BulletConfig(**bullet_config)
         self.isaac_gym_config = IsaacGymConfig(**isaac_gym_config)
@@ -176,6 +175,15 @@ class Body:
         """ """
         return self._attr_array_default_flag
 
+    def _init_device(self):
+        """ """
+        self._device = None
+
+    @property
+    def device(self):
+        """ """
+        return self._device
+
     def _init_callback(self):
         """ """
         self._callback_collect_dof_state = None
@@ -230,45 +238,6 @@ class Body:
     def box_half_extent(self, value):
         """ """
         self._box_half_extent = value
-
-    @property
-    def device(self):
-        """ """
-        return self._device
-
-    @device.setter
-    def device(self, value):
-        """ """
-        self._device = value
-
-        if hasattr(self, "_env_ids_load") and self.env_ids_load is not None:
-            self.env_ids_load = self.env_ids_load.to(value)
-
-        if hasattr(self, "_initial_base_position") and self.initial_base_position is not None:
-            self.initial_base_position = self.initial_base_position.to(value)
-        if hasattr(self, "_initial_base_velocity") and self.initial_base_velocity is not None:
-            self.initial_base_velocity = self.initial_base_velocity.to(value)
-        if hasattr(self, "_initial_dof_position") and self.initial_dof_position is not None:
-            self.initial_dof_position = self.initial_dof_position.to(value)
-        if hasattr(self, "_initial_dof_velocity") and self.initial_dof_velocity is not None:
-            self.initial_dof_velocity = self.initial_dof_velocity.to(value)
-
-        if hasattr(self, "_dof_target_position") and self.dof_target_position is not None:
-            self.dof_target_position = self.dof_target_position.to(value)
-        if hasattr(self, "_dof_target_velocity") and self.dof_target_velocity is not None:
-            self.dof_target_velocity = self.dof_target_velocity.to(value)
-        if hasattr(self, "_dof_force") and self.dof_force is not None:
-            self.dof_force = self.dof_force.to(value)
-
-        if hasattr(self, "_env_ids_reset_base_state") and self.env_ids_reset_base_state is not None:
-            self.env_ids_reset_base_state = self.env_ids_reset_base_state.to(value)
-        if hasattr(self, "_env_ids_reset_dof_state") and self.env_ids_reset_dof_state is not None:
-            self.env_ids_reset_dof_state = self.env_ids_reset_dof_state.to(value)
-
-        if hasattr(self, "_dof_state") and self.dof_state is not None:
-            self.dof_state = self.dof_state.to(value)
-        if hasattr(self, "_link_state") and self.link_state is not None:
-            self.link_state = self.link_state.to(value)
 
     @property
     def use_fixed_base(self):
@@ -1044,6 +1013,34 @@ class Body:
             yield
         finally:
             getattr(self, attr).flags.writeable = False
+
+    def set_device(self, device):
+        """ """
+        self._device = device
+
+        if self.env_ids_load is not None:
+            self.env_ids_load = self.env_ids_load.to(device)
+
+        if self.initial_base_position is not None:
+            self.initial_base_position = self.initial_base_position.to(device)
+        if self.initial_base_velocity is not None:
+            self.initial_base_velocity = self.initial_base_velocity.to(device)
+        if self.initial_dof_position is not None:
+            self.initial_dof_position = self.initial_dof_position.to(device)
+        if self.initial_dof_velocity is not None:
+            self.initial_dof_velocity = self.initial_dof_velocity.to(device)
+
+        if self.dof_target_position is not None:
+            self.dof_target_position = self.dof_target_position.to(device)
+        if self.dof_target_velocity is not None:
+            self.dof_target_velocity = self.dof_target_velocity.to(device)
+        if self.dof_force is not None:
+            self.dof_force = self.dof_force.to(device)
+
+        if self.env_ids_reset_base_state is not None:
+            self.env_ids_reset_base_state = self.env_ids_reset_base_state.to(device)
+        if self.env_ids_reset_dof_state is not None:
+            self.env_ids_reset_dof_state = self.env_ids_reset_dof_state.to(device)
 
     def set_callback_collect_dof_state(self, callback):
         """ """

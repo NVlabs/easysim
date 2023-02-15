@@ -28,7 +28,6 @@ class Camera:
     def __init__(
         self,
         name=None,
-        device=None,
         width=None,
         height=None,
         vertical_fov=None,
@@ -41,10 +40,10 @@ class Camera:
     ):
         """ """
         self._init_attr_array_pipeline()
+        self._init_device()
         self._init_callback()
 
         self.name = name
-        self.device = device
 
         self.width = width
         self.height = height
@@ -99,6 +98,15 @@ class Camera:
         """ """
         return self._attr_array_dirty_mask
 
+    def _init_device(self):
+        """ """
+        self._device = None
+
+    @property
+    def device(self):
+        """ """
+        return self._device
+
     def _init_callback(self):
         """ """
         self._callback_render_color = None
@@ -114,23 +122,6 @@ class Camera:
     def name(self, value):
         """ """
         self._name = value
-
-    @property
-    def device(self):
-        """ """
-        return self._device
-
-    @device.setter
-    def device(self, value):
-        """ """
-        self._device = value
-
-        if hasattr(self, "_color") and self.color is not None:
-            self.color = self.color.to(value)
-        if hasattr(self, "_depth") and self.depth is not None:
-            self.depth = self.depth.to(value)
-        if hasattr(self, "_segmentation") and self.segmentation is not None:
-            self.segmentation = self.segmentation.to(value)
 
     @property
     def width(self):
@@ -454,6 +445,10 @@ class Camera:
             yield
         finally:
             getattr(self, attr).flags.writeable = False
+
+    def set_device(self, device):
+        """ """
+        self._device = device
 
     def set_callback_render_color(self, callback):
         """ """
