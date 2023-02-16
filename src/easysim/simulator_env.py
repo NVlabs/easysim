@@ -4,6 +4,7 @@
 
 import gym
 import abc
+import torch
 
 from easysim.scene import Scene
 from easysim.simulators.registration import make
@@ -48,6 +49,9 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
     def reset(self, env_ids=None, **kwargs):
         """ """
+        if env_ids is not None:
+            env_ids = torch.as_tensor(env_ids, dtype=torch.int64, device=self.device)
+
         self.pre_reset(env_ids, **kwargs)
 
         self._simulator.reset(env_ids)
