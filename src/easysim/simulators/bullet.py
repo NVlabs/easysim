@@ -928,7 +928,7 @@ class Bullet(Simulator):
             # The redundant if-else block below is an artifact due to `setJointMotorControlArray()`
             # not supporting `maxVelocity`. `setJointMotorControlArray()` is still preferred when
             # `maxVelocity` is not needed due to better speed performance.
-            if body.dof_max_velocity is None:
+            if body.attr_array_default_flag["dof_max_velocity"]:
                 kwargs = {}
                 if body.dof_target_position is not None:
                     kwargs["targetPositions"] = body.get_attr_tensor("dof_target_position", 0)
@@ -1024,14 +1024,12 @@ class Bullet(Simulator):
                     kwargs["targetPosition"] = body.get_attr_tensor("dof_target_position", 0)
                 if body.dof_target_velocity is not None:
                     kwargs["targetVelocity"] = body.get_attr_tensor("dof_target_velocity", 0)
-                if body.dof_max_velocity is not None:
-                    # For Bullet, 'dof_max_velocity' has no effect when not in the POSITION_CONROL
-                    # mode.
-                    kwargs["maxVelocity"] = body.get_attr_array("dof_max_velocity", 0)
                 if body.dof_position_gain is not None:
                     kwargs["positionGain"] = body.get_attr_array("dof_position_gain", 0)
                 if body.dof_velocity_gain is not None:
                     kwargs["velocityGain"] = body.get_attr_array("dof_velocity_gain", 0)
+                # For Bullet, 'dof_max_velocity' has no effect when not in the POSITION_CONROL mode.
+                kwargs["maxVelocity"] = body.get_attr_array("dof_max_velocity", 0)
                 if body.dof_control_mode.ndim == 0:
                     if body.dof_max_force is not None:
                         if body.dof_control_mode not in (
