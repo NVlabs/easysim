@@ -19,9 +19,9 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         self._scene = Scene()
 
-        self.init(**kwargs)
-
         self._simulator = make(self.cfg.SIM.SIMULATOR, cfg=self.cfg.SIM, scene=self.scene)
+
+        self.init(**kwargs)
 
     @property
     def cfg(self):
