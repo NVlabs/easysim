@@ -114,6 +114,7 @@ class IsaacGym(Simulator):
         else:
             sim_params.dt = cfg.TIME_STEP
             sim_params.substeps = cfg.SUBSTEPS
+
         sim_params.gravity = gymapi.Vec3(*cfg.GRAVITY)
         sim_params.up_axis = gymapi.UP_AXIS_Z
         sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
@@ -240,7 +241,8 @@ class IsaacGym(Simulator):
                 raise ValueError(f"For Isaac Gym, 'geometry_type' must not be None: '{body.name}'")
             if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE, GeometryType.BOX):
                 raise ValueError(
-                    f"For Isaac Gym, 'geometry_type' only supports URDF and SPHERE: '{body.name}'"
+                    "For Isaac Gym, 'geometry_type' only supports URDF, SPHERE, and BOX: "
+                    f"'{body.name}'"
                 )
             if body.geometry_type == GeometryType.URDF:
                 for attr in ("sphere_radius", "box_half_extent"):
