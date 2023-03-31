@@ -5,21 +5,12 @@
 import torch
 import numpy as np
 
-from contextlib import contextmanager
+from easysim.attrs import Attrs, AttrsArrayTensor
 
 
-class Body:
+class Body(AttrsArrayTensor):
     """ """
 
-    _ATTR_TENSOR_NDIM = {
-        "initial_base_position": 1,
-        "initial_base_velocity": 1,
-        "initial_dof_position": 1,
-        "initial_dof_velocity": 1,
-        "dof_target_position": 1,
-        "dof_target_velocity": 1,
-        "dof_force": 1,
-    }
     _ATTR_ARRAY_NDIM = {
         "scale": 0,
         "link_collision_filter": 1,
@@ -41,10 +32,18 @@ class Body:
         "dof_velocity_gain": 1,
         "dof_armature": 1,
     }
+    _ATTR_TENSOR_NDIM = {
+        "initial_base_position": 1,
+        "initial_base_velocity": 1,
+        "initial_dof_position": 1,
+        "initial_dof_velocity": 1,
+        "dof_target_position": 1,
+        "dof_target_velocity": 1,
+        "dof_force": 1,
+    }
+    _SETATTR_WHITELIST = ("dof_state", "link_state")
 
-    _created = False
-
-    def __init__(
+    def _init(
         self,
         name=None,
         description_type=None,
@@ -83,8 +82,6 @@ class Body:
         dof_force=None,
     ):
         """ """
-        self._init_attr_array_pipeline()
-        self._init_device()
         self._init_callback()
 
         self.name = name
@@ -134,55 +131,6 @@ class Body:
         self.dof_state = None
         self.link_state = None
         self.contact_id = None
-
-        self._created = True
-
-    def __setattr__(self, key, value):
-        """ """
-        # Exclude `dof_state` and `link_state` to prevent infinite recursion in property calls.
-        if self._created and key not in ("dof_state", "link_state") and not hasattr(self, key):
-            raise TypeError(f"Unrecognized Body attribute '{key}'")
-        object.__setattr__(self, key, value)
-
-    def _init_attr_array_pipeline(self):
-        """ """
-        self._attr_array_locked = {}
-        self._attr_array_dirty_flag = {}
-        self._attr_array_dirty_mask = {}
-        self._attr_array_default_flag = {}
-        for attr in self._ATTR_ARRAY_NDIM:
-            self._attr_array_locked[attr] = False
-            self._attr_array_dirty_flag[attr] = False
-            self._attr_array_default_flag[attr] = False
-
-    @property
-    def attr_array_locked(self):
-        """ """
-        return self._attr_array_locked
-
-    @property
-    def attr_array_dirty_flag(self):
-        """ """
-        return self._attr_array_dirty_flag
-
-    @property
-    def attr_array_dirty_mask(self):
-        """ """
-        return self._attr_array_dirty_mask
-
-    @property
-    def attr_array_default_flag(self):
-        """ """
-        return self._attr_array_default_flag
-
-    def _init_device(self):
-        """ """
-        self._device = None
-
-    @property
-    def device(self):
-        """ """
-        return self._device
 
     def _init_callback(self):
         """ """
@@ -955,69 +903,8 @@ class Body:
             value = np.asanyarray(value, dtype=np.int64)
         self._contact_id = value
 
-    def get_attr_array(self, attr, idx):
+    def _set_attr_device(self, device):
         """ """
-        return self._get_attr(attr, self._ATTR_ARRAY_NDIM[attr], idx)
-
-    def get_attr_tensor(self, attr, idx):
-        """ """
-        return self._get_attr(attr, self._ATTR_TENSOR_NDIM[attr], idx)
-
-    def _get_attr(self, attr, ndim, idx):
-        """ """
-        array = getattr(self, attr)
-        if array.ndim == ndim:
-            return array
-        if array.ndim == ndim + 1:
-            return array[idx]
-
-    def lock_attr_array(self):
-        """ """
-        for k in self._attr_array_locked:
-            if not self._attr_array_locked[k]:
-                self._attr_array_locked[k] = True
-            if getattr(self, k) is not None:
-                getattr(self, k).flags.writeable = False
-
-    def update_attr_array(self, attr, env_ids, value):
-        """ """
-        if getattr(self, attr).ndim != self._ATTR_ARRAY_NDIM[attr] + 1:
-            raise ValueError(
-                f"'{attr}' can only be updated when a per-env specification (ndim: "
-                f"{self._ATTR_ARRAY_NDIM[attr] + 1}) is used"
-            )
-        if len(env_ids) == 0:
-            return
-
-        env_ids_np = env_ids.cpu().numpy()
-
-        with self._make_attr_array_writeable(attr):
-            getattr(self, attr)[env_ids_np] = value
-
-        if not self._attr_array_dirty_flag[attr]:
-            self._attr_array_dirty_flag[attr] = True
-        try:
-            self._attr_array_dirty_mask[attr][env_ids_np] = True
-        except KeyError:
-            self._attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
-            self._attr_array_dirty_mask[attr][env_ids_np] = True
-
-        if self._attr_array_default_flag[attr]:
-            self._attr_array_default_flag[attr] = False
-
-    @contextmanager
-    def _make_attr_array_writeable(self, attr):
-        """ """
-        try:
-            getattr(self, attr).flags.writeable = True
-            yield
-        finally:
-            getattr(self, attr).flags.writeable = False
-
-    def set_device(self, device):
-        """ """
-        self._device = device
-
         if self.env_ids_load is not None:
             self.env_ids_load = self.env_ids_load.to(device)
 
@@ -1051,22 +938,14 @@ class Body:
         self._callback_collect_link_state = callback
 
 
-class BulletConfig:
+class BulletConfig(Attrs):
     """ """
 
-    _created = False
+    _SETATTR_WHITELIST = ()
 
-    def __init__(self, use_self_collision=None):
+    def _init(self, use_self_collision=None):
         """ """
         self.use_self_collision = use_self_collision
-
-        self._created = True
-
-    def __setattr__(self, key, value):
-        """ """
-        if self._created and not hasattr(self, key):
-            raise TypeError(f"Unrecognized BulletConfig attribute '{key}'")
-        object.__setattr__(self, key, value)
 
     @property
     def use_self_collision(self):
@@ -1079,12 +958,12 @@ class BulletConfig:
         self._use_self_collision = value
 
 
-class IsaacGymConfig:
+class IsaacGymConfig(Attrs):
     """ """
 
-    _created = False
+    _SETATTR_WHITELIST = ()
 
-    def __init__(
+    def _init(
         self,
         disable_gravity=None,
         flip_visual_attachments=None,
@@ -1098,14 +977,6 @@ class IsaacGymConfig:
         self.vhacd_enabled = vhacd_enabled
         self.vhacd_params = vhacd_params
         self.mesh_normal_mode = mesh_normal_mode
-
-        self._created = True
-
-    def __setattr__(self, key, value):
-        """ """
-        if self._created and not hasattr(self, key):
-            raise TypeError(f"Unrecognized IsaacGymConfig attribute '{key}'")
-        object.__setattr__(self, key, value)
 
     @property
     def disable_gravity(self):
