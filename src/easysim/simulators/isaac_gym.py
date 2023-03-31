@@ -20,7 +20,7 @@ except ImportError:
     from isaacgym import gymtorch, gymutil
 
 from easysim.simulators.simulator import Simulator
-from easysim.constants import GeometryType, DoFControlMode, MeshNormalMode
+from easysim.constants import DescriptionType, DoFControlMode, MeshNormalMode
 from easysim.contact import create_contact_array
 
 
@@ -237,14 +237,20 @@ class IsaacGym(Simulator):
                     body.isaac_gym_config.mesh_normal_mode
                 ]
 
-            if body.geometry_type is None:
-                raise ValueError(f"For Isaac Gym, 'geometry_type' must not be None: '{body.name}'")
-            if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE, GeometryType.BOX):
+            if body.description_type is None:
                 raise ValueError(
-                    "For Isaac Gym, 'geometry_type' only supports URDF, SPHERE, and BOX: "
+                    f"For Isaac Gym, 'description_type' must not be None: '{body.name}'"
+                )
+            if body.description_type not in (
+                DescriptionType.URDF,
+                DescriptionType.SPHERE,
+                DescriptionType.BOX,
+            ):
+                raise ValueError(
+                    "For Isaac Gym, 'description_type' only supports URDF, SPHERE, and BOX: "
                     f"'{body.name}'"
                 )
-            if body.geometry_type == GeometryType.URDF:
+            if body.description_type == DescriptionType.URDF:
                 for attr in ("sphere_radius", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
@@ -254,7 +260,7 @@ class IsaacGym(Simulator):
                 self._assets[body.name] = self._gym.load_asset(
                     self._sim, asset_root, asset_file, options=asset_options
                 )
-            if body.geometry_type == GeometryType.SPHERE:
+            if body.description_type == DescriptionType.SPHERE:
                 for attr in ("urdf_file", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
@@ -262,13 +268,13 @@ class IsaacGym(Simulator):
                         )
                 if body.sphere_radius is None:
                     raise ValueError(
-                        "For Isaac Gym, 'sphere_radius' must not be None if 'geometry_type' is set "
-                        f"to SPHERE: '{body.name}'"
+                        "For Isaac Gym, 'sphere_radius' must not be None if 'description_type' is "
+                        f"set to SPHERE: '{body.name}'"
                     )
                 self._assets[body.name] = self._gym.create_sphere(
                     self._sim, body.sphere_radius, options=asset_options
                 )
-            if body.geometry_type == GeometryType.BOX:
+            if body.description_type == DescriptionType.BOX:
                 for attr in ("urdf_file", "sphere_radius"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
@@ -276,8 +282,8 @@ class IsaacGym(Simulator):
                         )
                 if body.box_half_extent is None:
                     raise ValueError(
-                        "For Isaac Gym, 'box_half_extent' must not be None if 'geometry_type' is "
-                        f"set to BOX: '{body.name}'"
+                        "For Isaac Gym, 'box_half_extent' must not be None if 'description_type' "
+                        f"is set to BOX: '{body.name}'"
                     )
                 self._assets[body.name] = self._gym.create_box(
                     self._sim, *[x * 2 for x in body.box_half_extent], options=asset_options

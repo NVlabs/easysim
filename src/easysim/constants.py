@@ -3,7 +3,7 @@
 # Licensed under the MIT License [see LICENSE for details].
 
 
-class GeometryType:
+class DescriptionType:
     """ """
 
     URDF = 0

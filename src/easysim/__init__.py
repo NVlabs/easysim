@@ -50,7 +50,7 @@ del _get_version
 from easysim.simulator_env import SimulatorEnv, SimulatorWrapper
 from easysim.body import Body
 from easysim.camera import Camera
-from easysim.constants import GeometryType, DoFControlMode, MeshNormalMode
+from easysim.constants import DescriptionType, DoFControlMode, MeshNormalMode
 from easysim.config.config import cfg, get_cfg
 from easysim.cmd import get_config_from_args
 
@@ -59,7 +59,7 @@ __all__ = [
     "SimulatorWrapper",
     "Body",
     "Camera",
-    "GeometryType",
+    "DescriptionType",
     "DoFControlMode",
     "MeshNormalMode",
     "cfg",

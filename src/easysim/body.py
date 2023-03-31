@@ -47,7 +47,7 @@ class Body:
     def __init__(
         self,
         name=None,
-        geometry_type=None,
+        description_type=None,
         urdf_file=None,
         sphere_radius=None,
         box_half_extent=None,
@@ -88,7 +88,7 @@ class Body:
         self._init_callback()
 
         self.name = name
-        self.geometry_type = geometry_type
+        self.description_type = description_type
         self.urdf_file = urdf_file
         self.sphere_radius = sphere_radius
         self.box_half_extent = box_half_extent
@@ -200,14 +200,14 @@ class Body:
         self._name = value
 
     @property
-    def geometry_type(self):
+    def description_type(self):
         """ """
-        return self._geometry_type
+        return self._description_type
 
-    @geometry_type.setter
-    def geometry_type(self, value):
+    @description_type.setter
+    def description_type(self, value):
         """ """
-        self._geometry_type = value
+        self._description_type = value
 
     @property
     def urdf_file(self):

@@ -12,7 +12,7 @@ import time
 from contextlib import contextmanager
 
 from easysim.simulators.simulator import Simulator
-from easysim.constants import GeometryType, DoFControlMode
+from easysim.constants import DescriptionType, DoFControlMode
 from easysim.contact import create_contact_array
 
 
@@ -169,13 +169,17 @@ class Bullet(Simulator):
             and body.bullet_config.use_self_collision
         ):
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
-        if body.geometry_type is None:
-            raise ValueError(f"For Bullet, 'geometry_type' must not be None: '{body.name}'")
-        if body.geometry_type not in (GeometryType.URDF, GeometryType.SPHERE, GeometryType.BOX):
+        if body.description_type is None:
+            raise ValueError(f"For Bullet, 'description_type' must not be None: '{body.name}'")
+        if body.description_type not in (
+            DescriptionType.URDF,
+            DescriptionType.SPHERE,
+            DescriptionType.BOX,
+        ):
             raise ValueError(
-                f"For Bullet, 'geometry_type' only supports URDF, SPHERE, and BOX: '{body.name}'"
+                f"For Bullet, 'description_type' only supports URDF, SPHERE, and BOX: '{body.name}'"
             )
-        if body.geometry_type == GeometryType.URDF:
+        if body.description_type == DescriptionType.URDF:
             for attr in ("sphere_radius", "box_half_extent"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for geometry type URDF: '{body.name}'")
@@ -189,18 +193,19 @@ class Bullet(Simulator):
         else:
             for attr in ("scale",):
                 if getattr(body, attr) is not None:
-                    geometry_type = [
+                    description_type = [
                         x
-                        for x in dir(GeometryType)
-                        if not x.startswith("__") and getattr(GeometryType, x) == body.geometry_type
+                        for x in dir(DescriptionType)
+                        if not x.startswith("__")
+                        and getattr(DescriptionType, x) == body.description_type
                     ][0]
                     raise ValueError(
-                        f"For Bullet, '{attr}' is not supported for geometry type {geometry_type}:"
-                        f" '{body.name}'"
+                        f"For Bullet, '{attr}' is not supported for geometry type "
+                        f"{description_type}: '{body.name}'"
                     )
             kwargs_visual = {}
             kwargs_collision = {}
-            if body.geometry_type == GeometryType.SPHERE:
+            if body.description_type == DescriptionType.SPHERE:
                 for attr in ("urdf_file", "box_half_extent"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
@@ -215,7 +220,7 @@ class Bullet(Simulator):
                 kwargs["baseCollisionShapeIndex"] = self._p.createCollisionShape(
                     pybullet.GEOM_SPHERE, **kwargs_collision
                 )
-            if body.geometry_type == GeometryType.BOX:
+            if body.description_type == DescriptionType.BOX:
                 for attr in ("urdf_file", "sphere_radius"):
                     if getattr(body, attr) is not None:
                         raise ValueError(
