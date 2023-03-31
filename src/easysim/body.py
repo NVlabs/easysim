@@ -5,7 +5,7 @@
 import torch
 import numpy as np
 
-from easysim.attrs import Attrs, AttrsArrayTensor
+from easysim.attrs import Attrs, AttrsArrayTensor, AttrsSimulatorConfig
 
 
 class Body(AttrsArrayTensor):
@@ -51,8 +51,7 @@ class Body(AttrsArrayTensor):
         sphere_radius=None,
         box_half_extent=None,
         use_fixed_base=None,
-        bullet_config=dict(),
-        isaac_gym_config=dict(),
+        simulator_config=dict(),
         env_ids_load=None,
         initial_base_position=None,
         initial_base_velocity=None,
@@ -90,8 +89,8 @@ class Body(AttrsArrayTensor):
         self.sphere_radius = sphere_radius
         self.box_half_extent = box_half_extent
         self.use_fixed_base = use_fixed_base
-        self.bullet_config = BulletConfig(**bullet_config)
-        self.isaac_gym_config = IsaacGymConfig(**isaac_gym_config)
+        self._simulator_config = SimulatorConfig(**simulator_config)
+
         self.env_ids_load = env_ids_load
         self.initial_base_position = initial_base_position
         self.initial_base_velocity = initial_base_velocity
@@ -196,6 +195,11 @@ class Body(AttrsArrayTensor):
     def use_fixed_base(self, value):
         """ """
         self._use_fixed_base = value
+
+    @property
+    def simulator_config(self):
+        """ """
+        return self._simulator_config
 
     @property
     def env_ids_load(self):
@@ -1027,3 +1031,10 @@ class IsaacGymConfig(Attrs):
     def mesh_normal_mode(self, value):
         """ """
         self._mesh_normal_mode = value
+
+
+class SimulatorConfig(AttrsSimulatorConfig):
+    """ """
+
+    _BULLET_CONFIG = BulletConfig
+    _ISAAC_GYM_CONFIG = IsaacGymConfig

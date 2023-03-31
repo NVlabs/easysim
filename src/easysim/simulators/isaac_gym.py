@@ -200,9 +200,9 @@ class IsaacGym(Simulator):
 
         for body in self._scene.bodies:
             asset_options = gymapi.AssetOptions()
-            if body.isaac_gym_config.flip_visual_attachments is not None:
+            if body.simulator_config.isaac_gym.flip_visual_attachments is not None:
                 asset_options.flip_visual_attachments = (
-                    body.isaac_gym_config.flip_visual_attachments
+                    body.simulator_config.isaac_gym.flip_visual_attachments
                 )
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
@@ -220,21 +220,23 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.angular_damping = body.link_angular_damping
-            if body.isaac_gym_config.disable_gravity is not None:
-                asset_options.disable_gravity = body.isaac_gym_config.disable_gravity
+            if body.simulator_config.isaac_gym.disable_gravity is not None:
+                asset_options.disable_gravity = body.simulator_config.isaac_gym.disable_gravity
             asset_options.override_com = True
             asset_options.override_inertia = True
-            if body.isaac_gym_config.vhacd_enabled is not None:
-                asset_options.vhacd_enabled = body.isaac_gym_config.vhacd_enabled
-            if body.isaac_gym_config.vhacd_params is not None:
-                for attr in body.isaac_gym_config.vhacd_params:
+            if body.simulator_config.isaac_gym.vhacd_enabled is not None:
+                asset_options.vhacd_enabled = body.simulator_config.isaac_gym.vhacd_enabled
+            if body.simulator_config.isaac_gym.vhacd_params is not None:
+                for attr in body.simulator_config.isaac_gym.vhacd_params:
                     setattr(
-                        asset_options.vhacd_params, attr, body.isaac_gym_config.vhacd_params[attr]
+                        asset_options.vhacd_params,
+                        attr,
+                        body.simulator_config.isaac_gym.vhacd_params[attr],
                     )
             asset_options.use_mesh_materials = True
-            if body.isaac_gym_config.mesh_normal_mode is not None:
+            if body.simulator_config.isaac_gym.mesh_normal_mode is not None:
                 asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[
-                    body.isaac_gym_config.mesh_normal_mode
+                    body.simulator_config.isaac_gym.mesh_normal_mode
                 ]
 
             if body.description_type is None:

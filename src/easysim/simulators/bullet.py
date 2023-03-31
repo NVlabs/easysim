@@ -165,8 +165,8 @@ class Bullet(Simulator):
 
         kwargs = {}
         if (
-            body.bullet_config.use_self_collision is not None
-            and body.bullet_config.use_self_collision
+            body.simulator_config.bullet.use_self_collision is not None
+            and body.simulator_config.bullet.use_self_collision
         ):
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         if body.description_type is None:
