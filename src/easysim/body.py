@@ -47,9 +47,7 @@ class Body(AttrsArrayTensor):
         self,
         name=None,
         description_type=None,
-        urdf_file=None,
-        sphere_radius=None,
-        box_half_extent=None,
+        description_config=dict(),
         use_fixed_base=None,
         simulator_config=dict(),
         env_ids_load=None,
@@ -85,9 +83,7 @@ class Body(AttrsArrayTensor):
 
         self.name = name
         self.description_type = description_type
-        self.urdf_file = urdf_file
-        self.sphere_radius = sphere_radius
-        self.box_half_extent = box_half_extent
+        self._description_config = DescriptionConfig(**description_config)
         self.use_fixed_base = use_fixed_base
         self._simulator_config = SimulatorConfig(**simulator_config)
 
@@ -157,34 +153,9 @@ class Body(AttrsArrayTensor):
         self._description_type = value
 
     @property
-    def urdf_file(self):
+    def description_config(self):
         """ """
-        return self._urdf_file
-
-    @urdf_file.setter
-    def urdf_file(self, value):
-        """ """
-        self._urdf_file = value
-
-    @property
-    def sphere_radius(self):
-        """ """
-        return self._sphere_radius
-
-    @sphere_radius.setter
-    def sphere_radius(self, value):
-        """ """
-        self._sphere_radius = value
-
-    @property
-    def box_half_extent(self):
-        """ """
-        return self._box_half_extent
-
-    @box_half_extent.setter
-    def box_half_extent(self, value):
-        """ """
-        self._box_half_extent = value
+        return self._description_config
 
     @property
     def use_fixed_base(self):
@@ -1031,6 +1002,93 @@ class IsaacGymConfig(Attrs):
     def mesh_normal_mode(self, value):
         """ """
         self._mesh_normal_mode = value
+
+
+class DescriptionConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, sphere=dict(), box=dict(), urdf=dict()):
+        """ """
+        self._sphere = SphereConfig(**sphere)
+        self._box = BoxConfig(**box)
+        self._urdf = URDFConfig(**urdf)
+
+    @property
+    def sphere(self):
+        """ """
+        return self._sphere
+
+    @property
+    def box(self):
+        """ """
+        return self._box
+
+    @property
+    def urdf(self):
+        """ """
+        return self._urdf
+
+
+class SphereConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, radius=None):
+        """ """
+        self.radius = radius
+
+    @property
+    def radius(self):
+        """ """
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        """ """
+        self._radius = value
+
+
+class BoxConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, half_extent=None):
+        """ """
+        self.half_extent = half_extent
+
+    @property
+    def half_extent(self):
+        """ """
+        return self._half_extent
+
+    @half_extent.setter
+    def half_extent(self, value):
+        """ """
+        self._half_extent = value
+
+
+class URDFConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, path=None):
+        """ """
+        self.path = path
+
+    @property
+    def path(self):
+        """ """
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        """ """
+        self._path = value
 
 
 class SimulatorConfig(AttrsSimulatorConfig):
