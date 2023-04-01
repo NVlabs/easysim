@@ -85,7 +85,7 @@ class IsaacGym(Simulator):
 
         # Support only PhysX for now.
         self._physics_engine = gymapi.SIM_PHYSX
-        self._sim_params = self._parse_sim_params(self._cfg, sim_device_type)
+        self._sim_params = self._parse_sim_params(sim_device_type)
 
         self._num_envs = self._cfg.NUM_ENVS
 
@@ -104,25 +104,27 @@ class IsaacGym(Simulator):
         """ """
         return self._device
 
-    def _parse_sim_params(self, cfg, sim_device_type):
+    def _parse_sim_params(self, sim_device_type):
         """ """
         sim_params = gymapi.SimParams()
 
-        if cfg.USE_DEFAULT_STEP_PARAMS:
-            cfg.TIME_STEP = sim_params.dt
-            cfg.SUBSTEPS = sim_params.substeps
+        if self._cfg.USE_DEFAULT_STEP_PARAMS:
+            self._cfg.TIME_STEP = sim_params.dt
+            self._cfg.SUBSTEPS = sim_params.substeps
         else:
-            sim_params.dt = cfg.TIME_STEP
-            sim_params.substeps = cfg.SUBSTEPS
+            sim_params.dt = self._cfg.TIME_STEP
+            sim_params.substeps = self._cfg.SUBSTEPS
 
-        sim_params.gravity = gymapi.Vec3(*cfg.GRAVITY)
+        sim_params.gravity = gymapi.Vec3(*self._cfg.GRAVITY)
         sim_params.up_axis = gymapi.UP_AXIS_Z
-        sim_params.use_gpu_pipeline = cfg.USE_GPU_PIPELINE
+        sim_params.use_gpu_pipeline = self._cfg.USE_GPU_PIPELINE
 
         sim_params.physx.use_gpu = sim_device_type == "cuda"
-        sim_params.physx.max_depenetration_velocity = cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
+        sim_params.physx.max_depenetration_velocity = (
+            self._cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
+        )
         sim_params.physx.contact_collection = gymapi.ContactCollection(
-            cfg.ISAAC_GYM.PHYSX.CONTACT_COLLECTION
+            self._cfg.ISAAC_GYM.PHYSX.CONTACT_COLLECTION
         )
 
         return sim_params
