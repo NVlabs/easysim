@@ -244,18 +244,13 @@ class IsaacGym(Simulator):
                     f"For Isaac Gym, 'description_type' must not be None: '{body.name}'"
                 )
             if body.description_type not in (
-                DescriptionType.URDF,
                 DescriptionType.SPHERE,
                 DescriptionType.BOX,
+                DescriptionType.URDF,
             ):
                 raise ValueError(
-                    "For Isaac Gym, 'description_type' only supports URDF, SPHERE, and BOX: "
+                    "For Isaac Gym, 'description_type' only supports SPHERE, BOX, and URDF: "
                     f"'{body.name}'"
-                )
-            if body.description_type == DescriptionType.URDF:
-                asset_root, asset_file = os.path.split(body.description_config.urdf.path)
-                self._assets[body.name] = self._gym.load_asset(
-                    self._sim, asset_root, asset_file, options=asset_options
                 )
             if body.description_type == DescriptionType.SPHERE:
                 if body.description_config.sphere.radius is None:
@@ -276,6 +271,11 @@ class IsaacGym(Simulator):
                     self._sim,
                     *[x * 2 for x in body.description_config.box.half_extent],
                     options=asset_options,
+                )
+            if body.description_type == DescriptionType.URDF:
+                asset_root, asset_file = os.path.split(body.description_config.urdf.path)
+                self._assets[body.name] = self._gym.load_asset(
+                    self._sim, asset_root, asset_file, options=asset_options
                 )
 
             self._asset_num_dofs[body.name] = self._gym.get_asset_dof_count(self._assets[body.name])

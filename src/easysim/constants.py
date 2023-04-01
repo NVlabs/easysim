@@ -6,9 +6,9 @@
 class DescriptionType:
     """ """
 
-    URDF = 0
-    SPHERE = 1
-    BOX = 2
+    SPHERE = 0
+    BOX = 1
+    URDF = 2
 
 
 class DoFControlMode:
