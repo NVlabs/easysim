@@ -224,8 +224,6 @@ class Bullet(Simulator):
                 kwargs["baseCollisionShapeIndex"] = self._p.createCollisionShape(
                     pybullet.GEOM_BOX, **kwargs_collision
                 )
-            if body.use_fixed_base is not None and body.use_fixed_base:
-                kwargs["baseMass"] = 0.0
             self._body_ids[body.name] = self._p.createMultiBody(**kwargs)
 
         dof_indices = []
