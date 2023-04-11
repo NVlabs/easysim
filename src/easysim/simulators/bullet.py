@@ -120,14 +120,23 @@ class Bullet(Simulator):
             if not self._connected:
                 self._set_scene_callback()
 
-            if (
-                self._cfg.RENDER
-                and self._cfg.VIEWER.INIT_CAMERA_POSITION != (None, None, None)
-                and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None)
-            ):
-                self._set_viewer_camera_pose(
-                    self._cfg.VIEWER.INIT_CAMERA_POSITION, self._cfg.VIEWER.INIT_CAMERA_TARGET
-                )
+            if self._cfg.RENDER:
+                if bool(self._cfg.VIEWER.INIT_CAMERA_POSITION == (None, None, None)) != bool(
+                    self._cfg.VIEWER.INIT_CAMERA_TARGET == (None, None, None)
+                ):
+                    raise ValueError(
+                        "INIT_CAMERA_POSITION and INIT_CAMERA_TARGET need to be set together in "
+                        f"order to take effect: {self._cfg.VIEWER.INIT_CAMERA_POSITION}, "
+                        f"{self._cfg.VIEWER.INIT_CAMERA_TARGET}"
+                    )
+                elif self._cfg.VIEWER.INIT_CAMERA_POSITION != (
+                    None,
+                    None,
+                    None,
+                ) and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None):
+                    self._set_viewer_camera_pose(
+                        self._cfg.VIEWER.INIT_CAMERA_POSITION, self._cfg.VIEWER.INIT_CAMERA_TARGET
+                    )
 
         if not self._connected:
             self._connected = True

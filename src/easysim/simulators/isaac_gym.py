@@ -1019,7 +1019,15 @@ class IsaacGym(Simulator):
                 self._viewer, gymapi.KEY_V, "toggle_viewer_sync"
             )
 
-            if self._cfg.VIEWER.INIT_CAMERA_POSITION != (
+            if bool(self._cfg.VIEWER.INIT_CAMERA_POSITION == (None, None, None)) != bool(
+                self._cfg.VIEWER.INIT_CAMERA_TARGET == (None, None, None)
+            ):
+                raise ValueError(
+                    "INIT_CAMERA_POSITION and INIT_CAMERA_TARGET need to be set together in order "
+                    f"to take effect: {self._cfg.VIEWER.INIT_CAMERA_POSITION}, "
+                    f"{self._cfg.VIEWER.INIT_CAMERA_TARGET}"
+                )
+            elif self._cfg.VIEWER.INIT_CAMERA_POSITION != (
                 None,
                 None,
                 None,
