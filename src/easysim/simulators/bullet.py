@@ -179,7 +179,7 @@ class Bullet(Simulator):
         ):
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         if body.description_type is None:
-            raise ValueError(f"For Bullet, 'description_type' must not be None: '{body.name}'")
+            raise ValueError(f"'description_type' must not be None: '{body.name}'")
         if body.description_type not in (
             DescriptionType.URDF,
             DescriptionType.SPHERE,

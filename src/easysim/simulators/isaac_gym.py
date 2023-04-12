@@ -242,9 +242,7 @@ class IsaacGym(Simulator):
                 ]
 
             if body.description_type is None:
-                raise ValueError(
-                    f"For Isaac Gym, 'description_type' must not be None: '{body.name}'"
-                )
+                raise ValueError(f"'description_type' must not be None: '{body.name}'")
             if body.description_type not in (
                 DescriptionType.SPHERE,
                 DescriptionType.BOX,
