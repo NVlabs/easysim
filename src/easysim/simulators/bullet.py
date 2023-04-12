@@ -120,7 +120,7 @@ class Bullet(Simulator):
             if not self._connected:
                 self._set_scene_callback()
 
-            if self._cfg.RENDER:
+            if not self._connected and self._cfg.RENDER:
                 if bool(self._cfg.VIEWER.INIT_CAMERA_POSITION == (None, None, None)) != bool(
                     self._cfg.VIEWER.INIT_CAMERA_TARGET == (None, None, None)
                 ):
