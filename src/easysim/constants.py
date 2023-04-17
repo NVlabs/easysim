@@ -9,6 +9,7 @@ class DescriptionType:
     SPHERE = 0
     BOX = 1
     URDF = 2
+    USD = 3
 
 
 class DoFControlMode:

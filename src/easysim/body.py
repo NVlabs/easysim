@@ -1004,16 +1004,27 @@ class IsaacGymConfig(Attrs):
         self._mesh_normal_mode = value
 
 
+class IsaacSimConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self):
+        """ """
+        pass
+
+
 class DescriptionConfig(Attrs):
     """ """
 
     _SETATTR_WHITELIST = ()
 
-    def _init(self, sphere=dict(), box=dict(), urdf=dict()):
+    def _init(self, sphere=dict(), box=dict(), urdf=dict(), usd=dict()):
         """ """
         self._sphere = SphereConfig(**sphere)
         self._box = BoxConfig(**box)
         self._urdf = URDFConfig(**urdf)
+        self._usd = USDConfig(**usd)
 
     @property
     def sphere(self):
@@ -1029,6 +1040,11 @@ class DescriptionConfig(Attrs):
     def urdf(self):
         """ """
         return self._urdf
+
+    @property
+    def usd(self):
+        """ """
+        return self._usd
 
 
 class SphereConfig(Attrs):
@@ -1091,8 +1107,29 @@ class URDFConfig(Attrs):
         self._path = value
 
 
+class USDConfig(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, path=None):
+        """ """
+        self.path = path
+
+    @property
+    def path(self):
+        """ """
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        """ """
+        self._path = value
+
+
 class SimulatorConfig(AttrsSimulatorConfig):
     """ """
 
     _BULLET_CONFIG = BulletConfig
     _ISAAC_GYM_CONFIG = IsaacGymConfig
+    _ISAAC_SIM_CONFIG = IsaacSimConfig

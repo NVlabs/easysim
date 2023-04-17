@@ -79,3 +79,9 @@ register(
     name="isaac_gym",
     entry_point="easysim.simulators.isaac_gym:IsaacGym",
 )
+
+register(
+    name="isaac_sim",
+    entry_point="easysim.simulators.isaac_sim:IsaacSim",
+    # entry_point="easysim.simulators.isaac_sim_dev:IsaacSim",
+)

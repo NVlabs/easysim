@@ -152,10 +152,11 @@ class AttrsSimulatorConfig(Attrs):
 
     _SETATTR_WHITELIST = ()
 
-    def _init(self, bullet=dict(), isaac_gym=dict()):
+    def _init(self, bullet=dict(), isaac_gym=dict(), isaac_sim=dict()):
         """ """
         self._bullet = self._BULLET_CONFIG(**bullet)
         self._isaac_gym = self._ISAAC_GYM_CONFIG(**isaac_gym)
+        self._isaac_sim = self._ISAAC_SIM_CONFIG(**isaac_sim)
 
     @property
     def bullet(self):
@@ -166,3 +167,8 @@ class AttrsSimulatorConfig(Attrs):
     def isaac_gym(self):
         """ """
         return self._isaac_gym
+
+    @property
+    def isaac_sim(self):
+        """ """
+        return self._isaac_sim
