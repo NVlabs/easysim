@@ -263,6 +263,12 @@ class IsaacSim(Simulator):
         """ """
         self._articulation_views = {}
         self._num_dofs = {}
+
+        self._initial_base_position = {}
+        self._initial_base_velocity = {}
+        self._initial_dof_position = {}
+        self._initial_dof_velocity = {}
+
         for body in self._scene.bodies:
             self._articulation_views[
                 body.name
@@ -270,6 +276,19 @@ class IsaacSim(Simulator):
                 f"{self._DEFAULT_BASE_ENV_PATH}/*/{body.name}"
             )
             self._num_dofs[body.name] = self._articulation_views[body.name].max_dofs
+
+            self._initial_base_position[body.name] = (
+                self._articulation_views[body.name].get_root_transforms().clone()
+            )
+            self._initial_base_velocity[body.name] = (
+                self._articulation_views[body.name].get_root_velocities().clone()
+            )
+            self._initial_dof_position[body.name] = (
+                self._articulation_views[body.name].get_dof_positions().clone()
+            )
+            self._initial_dof_velocity[body.name] = (
+                self._articulation_views[body.name].get_dof_velocities().clone()
+            )
 
     def _cache_body_and_set_props(self):
         """ """
@@ -345,19 +364,31 @@ class IsaacSim(Simulator):
 
     def _reset_base_state(self, body, env_ids):
         """ """
-        data = body.initial_base_position.expand((self._num_envs, -1)).contiguous()
-        data[:, 0:3] += self._env_pos[env_ids]
+        if body.initial_base_position is None:
+            data = self._initial_base_position[body.name]
+        else:
+            data = body.initial_base_position.expand((self._num_envs, -1)).contiguous()
+            data[:, 0:3] += self._env_pos[env_ids]
         self._articulation_views[body.name].set_root_transforms(data, env_ids)
 
-        data = body.initial_base_velocity.expand((self._num_envs, -1))
+        if body.initial_base_velocity is None:
+            data = self._initial_base_velocity[body.name]
+        else:
+            data = body.initial_base_velocity.expand((self._num_envs, -1))
         self._articulation_views[body.name].set_root_velocities(data, env_ids)
 
     def _reset_dof_state(self, body, env_ids):
         """ """
-        data = body.initial_dof_position.expand((self._num_envs, -1))
+        if body.initial_dof_position is None:
+            data = self._initial_dof_position[body.name]
+        else:
+            data = body.initial_dof_position.expand((self._num_envs, -1))
         self._articulation_views[body.name].set_dof_positions(data, env_ids)
 
-        data = body.initial_dof_velocity.expand((self._num_envs, -1))
+        if body.initial_dof_velocity is None:
+            data = self._initial_dof_velocity[body.name]
+        else:
+            data = body.initial_dof_velocity.expand((self._num_envs, -1))
         self._articulation_views[body.name].set_dof_velocities(data, env_ids)
 
     def step(self):
