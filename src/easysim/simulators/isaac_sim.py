@@ -101,6 +101,7 @@ class IsaacSim(Simulator):
             self._scene_cache = type(self._scene)()
             self._cache_body_and_set_props()
             self._set_body_device()
+            self._set_body_callback()
 
             self._created = True
 
@@ -108,6 +109,8 @@ class IsaacSim(Simulator):
             env_ids = torch.arange(self._num_envs, device=self.device)
 
         self._reset_idx(env_ids)
+
+        self._clear_state()
 
     def _create_simulation_app(self):
         """ """
@@ -341,6 +344,35 @@ class IsaacSim(Simulator):
         for body in self._scene.bodies:
             body.set_device(self.device)
 
+    def _set_body_callback(self):
+        """ """
+        for body in self._scene.bodies:
+            body.set_callback_collect_dof_state(self._collect_dof_state)
+            body.set_callback_collect_link_state(self._collect_link_state)
+
+    def _collect_dof_state(self, body):
+        """ """
+        if self._num_dofs[body.name] > 0:
+            body.dof_state = torch.stack(
+                (
+                    self._articulation_views[body.name].get_dof_positions(),
+                    self._articulation_views[body.name].get_dof_velocities(),
+                ),
+                dim=2,
+            )
+
+    def _collect_link_state(self, body):
+        """ """
+        link_state = torch.cat(
+            (
+                self._articulation_views[body.name].get_root_transforms(),
+                self._articulation_views[body.name].get_root_velocities(),
+            ),
+            dim=1,
+        )
+        link_state[:, 0:3] -= self._env_pos
+        body.link_state = link_state
+
     def _reset_idx(self, env_ids):
         """ """
         if [body.name for body in self._scene.bodies] != [
@@ -391,6 +423,12 @@ class IsaacSim(Simulator):
             data = body.initial_dof_velocity.expand((self._num_envs, -1))
         self._articulation_views[body.name].set_dof_velocities(data, env_ids)
 
+    def _clear_state(self):
+        """ """
+        for body in self._scene.bodies:
+            body.dof_state = None
+            body.link_state = None
+
     def step(self):
         """ """
         if self._cfg.RENDER:
@@ -427,6 +465,8 @@ class IsaacSim(Simulator):
                 self._articulation_views[body.name].set_dof_actuation_forces(data, indices)
 
         self._world.step(render=self._cfg.RENDER)
+
+        self._clear_state()
 
     @property
     def contact(self):
