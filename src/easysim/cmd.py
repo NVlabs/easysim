@@ -16,7 +16,7 @@ def parse_config_args():
         nargs=argparse.REMAINDER,
         help=(
             """modify config options at the end of the command; use space-separated """
-            """"PATH.KEY VALUE" pairs; see src/easysim/config.py for all options"""
+            """"PATH.KEY VALUE" pairs; see src/easysim/config/config.py for all options"""
         ),
     )
     args = parser.parse_args()
