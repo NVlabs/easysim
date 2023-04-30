@@ -21,6 +21,7 @@ class Scene:
 
         self._name_to_camera = {}
 
+        self._init_device()
         self._init_callback()
 
     @property
@@ -33,10 +34,20 @@ class Scene:
         """ """
         return self._cameras
 
+    def _init_device(self):
+        """ """
+        self._device = None
+        self._graphics_device = None
+
     def _init_callback(self):
         """ """
         self._callback_add_camera = None
         self._callback_remove_camera = None
+
+    def set_device(self, device, graphics_device):
+        """ """
+        self._device = device
+        self._graphics_device = graphics_device
 
     def add_body(self, body):
         """ """
@@ -48,14 +59,17 @@ class Scene:
             raise ValueError("body.name must not be None")
         if body.name in self._name_to_body:
             raise ValueError(f"Cannot add body with duplicated name: '{body.name}'")
-        self.bodies.append(body)
 
+        body.set_device(self._device)
+
+        self.bodies.append(body)
         self._name_to_body[body.name] = body
 
     def remove_body(self, body):
         """ """
         if body not in self.bodies:
             raise ValueError("body not in the scene")
+
         self.bodies.remove(body)
 
         del self._name_to_body[body.name]
@@ -76,8 +90,10 @@ class Scene:
             raise ValueError("camera.name must not be None")
         if camera.name in self._name_to_camera:
             raise ValueError(f"Cannot add camera with duplicated name: '{camera.name}")
-        self.cameras.add(camera)
 
+        camera.set_device(self._graphics_device)
+
+        self.cameras.add(camera)
         self._name_to_camera[camera.name] = camera
 
         if self._callback_add_camera is not None:
@@ -87,6 +103,7 @@ class Scene:
         """ """
         if camera not in self.cameras:
             raise ValueError("camera not in the scene")
+
         self.cameras.remove(camera)
 
         del self._name_to_camera[camera.name]

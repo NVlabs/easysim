@@ -59,10 +59,8 @@ class IsaacGym(Simulator):
         DoFControlMode.TORQUE_CONTROL: gymapi.DOF_MODE_EFFORT,
     }
 
-    def __init__(self, cfg, scene):
+    def _init(self):
         """ """
-        super().__init__(cfg, scene)
-
         x = self._cfg.SIM_DEVICE.split(":")
         sim_device_type = x[0]
         if len(x) > 1:
@@ -78,6 +76,7 @@ class IsaacGym(Simulator):
                 print("GPU pipeline can only be used with GPU simulation. Forcing CPU pipeline.")
                 self._cfg.USE_GPU_PIPELINE = False
 
+        self._graphics_device = None
         if self._cfg.RENDER or self._cfg.ISAAC_GYM.ENABLE_CAMERA_SENSORS:
             self._graphics_device = "cuda:" + str(self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID)
         elif self._cfg.ISAAC_GYM.GRAPHICS_DEVICE_ID != -1:
@@ -103,6 +102,11 @@ class IsaacGym(Simulator):
     def device(self):
         """ """
         return self._device
+
+    @property
+    def graphics_device(self):
+        """ """
+        return self._graphics_device
 
     def _parse_sim_params(self, sim_device_type):
         """ """
@@ -148,10 +152,8 @@ class IsaacGym(Simulator):
 
             self._scene_cache = type(self._scene)()
             self._cache_body_and_set_props()
-            self._set_body_device()
             self._set_body_callback()
             self._set_camera_props()
-            self._set_camera_device()
             self._set_camera_callback()
             self._set_scene_callback()
 
@@ -718,11 +720,6 @@ class IsaacGym(Simulator):
             self._envs[idx], self._actor_handles[idx][body.name], dof_props
         )
 
-    def _set_body_device(self):
-        """ """
-        for body in self._scene.bodies:
-            body.set_device(self.device)
-
     def _set_body_callback(self):
         """ """
         for body in self._scene.bodies:
@@ -844,11 +841,6 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, either 'target' or 'orientation' is required to be set: "
                 f"{camera.name}"
             )
-
-    def _set_camera_device(self):
-        """ """
-        for camera in self._scene.cameras:
-            camera.set_device(self._graphics_device)
 
     def _set_camera_callback(self):
         """ """

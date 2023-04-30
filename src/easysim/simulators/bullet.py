@@ -39,10 +39,8 @@ class Bullet(Simulator):
         DoFControlMode.TORQUE_CONTROL: pybullet.TORQUE_CONTROL,
     }
 
-    def __init__(self, cfg, scene):
+    def _init(self):
         """ """
-        super().__init__(cfg, scene)
-
         if self._cfg.NUM_ENVS != 1:
             raise ValueError("NUM_ENVS must be 1 for Bullet")
         if self._cfg.SIM_DEVICE != "cpu":
@@ -60,6 +58,11 @@ class Bullet(Simulator):
     def device(self):
         """ """
         return self._device
+
+    @property
+    def graphics_device(self):
+        """ """
+        return self._graphics_device
 
     def reset(self, env_ids):
         """ """
@@ -105,7 +108,6 @@ class Bullet(Simulator):
             for body in self._scene.bodies:
                 self._load_body(body)
                 self._cache_body_and_set_control_and_props(body)
-                self._set_body_device(body)
                 self._set_body_callback(body)
 
             self._projection_matrix = {}
@@ -114,7 +116,6 @@ class Bullet(Simulator):
 
             for camera in self._scene.cameras:
                 self._load_camera(camera)
-                self._set_camera_device(camera)
                 self._set_camera_callback(camera)
 
             if not self._connected:
@@ -597,10 +598,6 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, **{k: v[i] for k, v in kwargs.items()}
                 )
 
-    def _set_body_device(self, body):
-        """ """
-        body.set_device(self.device)
-
     def _set_body_callback(self, body):
         """ """
         body.set_callback_collect_dof_state(self._collect_dof_state)
@@ -680,10 +677,6 @@ class Bullet(Simulator):
         self._image_cache[camera.name]["color"] = None
         self._image_cache[camera.name]["depth"] = None
         self._image_cache[camera.name]["segmentation"] = None
-
-    def _set_camera_device(self, camera):
-        """ """
-        camera.set_device(self._graphics_device)
 
     def _set_camera_callback(self, camera):
         """ """
@@ -832,7 +825,6 @@ class Bullet(Simulator):
                 with self._disable_cov_rendering():
                     self._load_body(body)
                     self._cache_body_and_set_control_and_props(body)
-                    self._set_body_device(body)
                     self._set_body_callback(body)
 
         for body in self._scene.bodies:

@@ -181,7 +181,7 @@ class Body(AttrsArrayTensor):
     def env_ids_load(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.int64, device=self._device)
             if value.ndim != 1:
                 raise ValueError("'env_ids_load' must have a number of dimensions of 1")
         self._env_ids_load = value
@@ -195,7 +195,7 @@ class Body(AttrsArrayTensor):
     def initial_base_position(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["initial_base_position"],
                 self._ATTR_TENSOR_NDIM["initial_base_position"] + 1,
@@ -218,7 +218,7 @@ class Body(AttrsArrayTensor):
     def initial_base_velocity(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["initial_base_velocity"],
                 self._ATTR_TENSOR_NDIM["initial_base_velocity"] + 1,
@@ -241,7 +241,7 @@ class Body(AttrsArrayTensor):
     def initial_dof_position(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["initial_dof_position"],
                 self._ATTR_TENSOR_NDIM["initial_dof_position"] + 1,
@@ -262,7 +262,7 @@ class Body(AttrsArrayTensor):
     def initial_dof_velocity(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["initial_dof_velocity"],
                 self._ATTR_TENSOR_NDIM["initial_dof_velocity"] + 1,
@@ -756,7 +756,7 @@ class Body(AttrsArrayTensor):
     def dof_target_position(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["dof_target_position"],
                 self._ATTR_TENSOR_NDIM["dof_target_position"] + 1,
@@ -777,7 +777,7 @@ class Body(AttrsArrayTensor):
     def dof_target_velocity(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["dof_target_velocity"],
                 self._ATTR_TENSOR_NDIM["dof_target_velocity"] + 1,
@@ -798,7 +798,7 @@ class Body(AttrsArrayTensor):
     def dof_force(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
                 self._ATTR_TENSOR_NDIM["dof_force"],
                 self._ATTR_TENSOR_NDIM["dof_force"] + 1,
@@ -819,7 +819,7 @@ class Body(AttrsArrayTensor):
     def env_ids_reset_base_state(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.int64, device=self._device)
             if value.ndim != 1:
                 raise ValueError("'env_ids_reset_base_state' must have a number of dimensions of 1")
         self._env_ids_reset_base_state = value
@@ -833,7 +833,7 @@ class Body(AttrsArrayTensor):
     def env_ids_reset_dof_state(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.int64, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.int64, device=self._device)
             if value.ndim != 1:
                 raise ValueError("'env_ids_reset_dof_state' must have a number of dimensions of 1")
         self._env_ids_reset_dof_state = value
@@ -849,7 +849,7 @@ class Body(AttrsArrayTensor):
     def dof_state(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
         self._dof_state = value
 
     @property
@@ -863,7 +863,7 @@ class Body(AttrsArrayTensor):
     def link_state(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
         self._link_state = value
 
     @property

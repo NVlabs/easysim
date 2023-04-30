@@ -72,11 +72,6 @@ class AttrsArrayTensor(Attrs):
         """ """
         self._device = None
 
-    @property
-    def device(self):
-        """ """
-        return self._device
-
     def get_attr_array(self, attr, idx):
         """ """
         return self._get_attr(attr, self._ATTR_ARRAY_NDIM[attr], idx)

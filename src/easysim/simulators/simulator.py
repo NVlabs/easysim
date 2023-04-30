@@ -13,9 +13,22 @@ class Simulator(abc.ABC):
         self._cfg = cfg
         self._scene = scene
 
+        self._init()
+
+        self._scene.set_device(self.device, self.graphics_device)
+
+    @abc.abstractmethod
+    def _init(self):
+        """ """
+
     @property
     @abc.abstractmethod
     def device(self):
+        """ """
+
+    @property
+    @abc.abstractmethod
+    def graphics_device(self):
         """ """
 
     @abc.abstractmethod

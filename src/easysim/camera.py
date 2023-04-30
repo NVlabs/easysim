@@ -313,7 +313,7 @@ class Camera(AttrsArrayTensor):
     def color(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.uint8, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.uint8, device=self._device)
         self._color = value
 
     @property
@@ -327,7 +327,7 @@ class Camera(AttrsArrayTensor):
     def depth(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.float32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
         self._depth = value
 
     @property
@@ -341,7 +341,7 @@ class Camera(AttrsArrayTensor):
     def segmentation(self, value):
         """ """
         if value is not None:
-            value = torch.as_tensor(value, dtype=torch.int32, device=self.device)
+            value = torch.as_tensor(value, dtype=torch.int32, device=self._device)
         self._segmentation = value
 
     def _set_attr_device(self, device):

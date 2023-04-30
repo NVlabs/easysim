@@ -43,6 +43,11 @@ class SimulatorEnv(gym.Env, abc.ABC):
         """ """
         return self._simulator.device
 
+    @property
+    def graphics_device(self):
+        """ """
+        return self._simulator.graphics_device
+
     @abc.abstractmethod
     def init(self, **kwargs):
         """ """

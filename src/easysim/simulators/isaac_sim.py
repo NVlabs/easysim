@@ -28,10 +28,8 @@ class IsaacSim(Simulator):
     _DEFAULT_DISTANT_LIGHT_PATH = "/World/defaultDistantLight"
     _DEFAULT_DISTANT_LIGHT_INTENSITY = 5000
 
-    def __init__(self, cfg, scene):
+    def _init(self):
         """ """
-        super().__init__(cfg, scene)
-
         if self._cfg.SUBSTEPS != 1:
             raise ValueError("SUBSTEPS must be 1 for Isaac Sim")
 
@@ -61,6 +59,11 @@ class IsaacSim(Simulator):
     def device(self):
         """ """
         return self._device
+
+    @property
+    def graphics_device(self):
+        """ """
+        raise NotImplementedError
 
     def _parse_sim_params(self, sim_device_type):
         """ """
@@ -100,7 +103,6 @@ class IsaacSim(Simulator):
 
             self._scene_cache = type(self._scene)()
             self._cache_body_and_set_props()
-            self._set_body_device()
             self._set_body_callback()
 
             self._created = True
@@ -338,11 +340,6 @@ class IsaacSim(Simulator):
             if body.dof_velocity_gain is not None:
                 data = torch.from_numpy(body.dof_velocity_gain).expand((self._num_envs, -1))
                 self._articulation_views[body.name].set_dof_dampings(data, indices)
-
-    def _set_body_device(self):
-        """ """
-        for body in self._scene.bodies:
-            body.set_device(self.device)
 
     def _set_body_callback(self):
         """ """
