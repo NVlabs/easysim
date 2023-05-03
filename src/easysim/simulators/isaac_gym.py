@@ -204,10 +204,25 @@ class IsaacGym(Simulator):
 
         for body in self._scene.bodies:
             asset_options = gymapi.AssetOptions()
-            if body.simulator_config.isaac_gym.flip_visual_attachments is not None:
-                asset_options.flip_visual_attachments = (
-                    body.simulator_config.isaac_gym.flip_visual_attachments
-                )
+            for attr in (
+                "flip_visual_attachments",
+                "disable_gravity",
+                "override_com",
+                "override_inertia",
+                "vhacd_enabled",
+                "vhacd_params",
+                "use_mesh_materials",
+                "mesh_normal_mode",
+            ):
+                value = getattr(body.simulator_config.isaac_gym, attr)
+                if value is not None:
+                    if attr == "vhacd_params":
+                        for x in value:
+                            setattr(getattr(asset_options, attr), x, value[x])
+                    else:
+                        if attr == "mesh_normal_mode":
+                            value = self._MESH_NORMAL_MODE_MAP[value]
+                        setattr(asset_options, attr, value)
             if body.use_fixed_base is not None:
                 asset_options.fix_base_link = body.use_fixed_base
             if body.link_linear_damping is not None:
@@ -224,24 +239,6 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.angular_damping = body.link_angular_damping
-            if body.simulator_config.isaac_gym.disable_gravity is not None:
-                asset_options.disable_gravity = body.simulator_config.isaac_gym.disable_gravity
-            asset_options.override_com = True
-            asset_options.override_inertia = True
-            if body.simulator_config.isaac_gym.vhacd_enabled is not None:
-                asset_options.vhacd_enabled = body.simulator_config.isaac_gym.vhacd_enabled
-            if body.simulator_config.isaac_gym.vhacd_params is not None:
-                for attr in body.simulator_config.isaac_gym.vhacd_params:
-                    setattr(
-                        asset_options.vhacd_params,
-                        attr,
-                        body.simulator_config.isaac_gym.vhacd_params[attr],
-                    )
-            asset_options.use_mesh_materials = True
-            if body.simulator_config.isaac_gym.mesh_normal_mode is not None:
-                asset_options.mesh_normal_mode = self._MESH_NORMAL_MODE_MAP[
-                    body.simulator_config.isaac_gym.mesh_normal_mode
-                ]
 
             if body.description_type is None:
                 raise ValueError(f"'description_type' must not be None: '{body.name}'")

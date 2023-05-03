@@ -940,18 +940,34 @@ class IsaacGymConfig(Attrs):
 
     def _init(
         self,
-        disable_gravity=None,
         flip_visual_attachments=None,
+        disable_gravity=None,
+        override_com=None,
+        override_inertia=None,
         vhacd_enabled=None,
         vhacd_params=None,
+        use_mesh_materials=None,
         mesh_normal_mode=None,
     ):
         """ """
-        self.disable_gravity = disable_gravity
         self.flip_visual_attachments = flip_visual_attachments
+        self.disable_gravity = disable_gravity
+        self.override_com = override_com
+        self.override_inertia = override_inertia
         self.vhacd_enabled = vhacd_enabled
         self.vhacd_params = vhacd_params
+        self.use_mesh_materials = use_mesh_materials
         self.mesh_normal_mode = mesh_normal_mode
+
+    @property
+    def flip_visual_attachments(self):
+        """ """
+        return self._flip_visual_attachments
+
+    @flip_visual_attachments.setter
+    def flip_visual_attachments(self, value):
+        """ """
+        self._flip_visual_attachments = value
 
     @property
     def disable_gravity(self):
@@ -964,14 +980,24 @@ class IsaacGymConfig(Attrs):
         self._disable_gravity = value
 
     @property
-    def flip_visual_attachments(self):
+    def override_com(self):
         """ """
-        return self._flip_visual_attachments
+        return self._override_com
 
-    @flip_visual_attachments.setter
-    def flip_visual_attachments(self, value):
+    @override_com.setter
+    def override_com(self, value):
         """ """
-        self._flip_visual_attachments = value
+        self._override_com = value
+
+    @property
+    def override_inertia(self):
+        """ """
+        return self._override_inertia
+
+    @override_inertia.setter
+    def override_inertia(self, value):
+        """ """
+        self._override_inertia = value
 
     @property
     def vhacd_enabled(self):
@@ -992,6 +1018,16 @@ class IsaacGymConfig(Attrs):
     def vhacd_params(self, value):
         """ """
         self._vhacd_params = value
+
+    @property
+    def use_mesh_materials(self):
+        """ """
+        return self._use_mesh_materials
+
+    @use_mesh_materials.setter
+    def use_mesh_materials(self, value):
+        """ """
+        self._use_mesh_materials = value
 
     @property
     def mesh_normal_mode(self):
