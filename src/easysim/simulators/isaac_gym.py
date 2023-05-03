@@ -91,12 +91,12 @@ class IsaacGym(Simulator):
         self._gym = gymapi.acquire_gym()
 
         self._created = False
-        self._last_render_time = 0.0
         self._counter_render = 0
         self._render_time_step = max(
             1.0 / self._cfg.ISAAC_GYM.VIEWER.RENDER_FRAME_RATE, self._cfg.TIME_STEP
         )
         self._render_steps = self._render_time_step / self._cfg.TIME_STEP
+        self._last_render_time = 0.0
 
     @property
     def device(self):
@@ -1543,12 +1543,14 @@ class IsaacGym(Simulator):
                 if (self._counter_render % self._render_steps) <= (
                     self._counter_render - 1
                 ) % self._render_steps:
-                    # Simulate real-time rendering with sleep if computation takes less than real time.
-                    time_spent = time.time() - self._last_render_time
-                    time_sleep = self._render_time_step - time_spent
-                    if time_sleep > 0:
-                        time.sleep(time_sleep)
-                    self._last_render_time = time.time()
+                    if self._cfg.SIMULATE_REAL_TIME_RENDER:
+                        # Simulate real-time rendering with sleep if computation takes less than
+                        # real time.
+                        time_spent = time.time() - self._last_render_time
+                        time_sleep = self._render_time_step - time_spent
+                        if time_sleep > 0:
+                            time.sleep(time_sleep)
+                        self._last_render_time = time.time()
 
                     self._check_and_step_graphics()
 

@@ -44,6 +44,8 @@ _C.SIM.USE_GPU_PIPELINE = False
 
 _C.SIM.LOAD_GROUND_PLANE = True
 
+_C.SIM.SIMULATE_REAL_TIME_RENDER = True
+
 # ---------------------------------------------------------------------------- #
 # Viewer config
 # ---------------------------------------------------------------------------- #

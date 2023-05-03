@@ -802,7 +802,7 @@ class Bullet(Simulator):
 
     def step(self):
         """ """
-        if self._cfg.RENDER:
+        if self._cfg.RENDER and self._cfg.SIMULATE_REAL_TIME_RENDER:
             # Simulate real-time rendering with sleep if computation takes less than real time.
             time_spent = time.time() - self._last_frame_time
             time_sleep = self._cfg.TIME_STEP - time_spent
