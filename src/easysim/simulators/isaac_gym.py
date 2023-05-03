@@ -123,10 +123,14 @@ class IsaacGym(Simulator):
         sim_params.up_axis = gymapi.UP_AXIS_Z
         sim_params.use_gpu_pipeline = self._cfg.USE_GPU_PIPELINE
 
+        sim_params.physx.num_threads = self._cfg.ISAAC_GYM.PHYSX.NUM_THREADS
         sim_params.physx.use_gpu = sim_device_type == "cuda"
+        sim_params.physx.num_position_iterations = self._cfg.ISAAC_GYM.PHYSX.NUM_POSITION_ITERATIONS
+        sim_params.physx.num_velocity_iterations = self._cfg.ISAAC_GYM.PHYSX.NUM_VELOCITY_ITERATIONS
         sim_params.physx.max_depenetration_velocity = (
             self._cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
         )
+        sim_params.physx.num_subscenes = self._cfg.ISAAC_GYM.PHYSX.NUM_SUBSCENES
         sim_params.physx.contact_collection = gymapi.ContactCollection(
             self._cfg.ISAAC_GYM.PHYSX.CONTACT_COLLECTION
         )
