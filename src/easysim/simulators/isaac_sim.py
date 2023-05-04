@@ -397,7 +397,7 @@ class IsaacSim(Simulator):
             data = self._initial_base_position[body.name]
         else:
             data = body.initial_base_position.expand((self._num_envs, -1)).contiguous()
-            data[:, 0:3] += self._env_pos[env_ids]
+            data[env_ids, 0:3] += self._env_pos[env_ids]
         self._articulation_views[body.name].set_root_transforms(data, env_ids)
 
         if body.initial_base_velocity is None:
