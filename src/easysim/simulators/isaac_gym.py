@@ -125,14 +125,20 @@ class IsaacGym(Simulator):
 
         sim_params.physx.num_threads = self._cfg.ISAAC_GYM.PHYSX.NUM_THREADS
         sim_params.physx.use_gpu = sim_device_type == "cuda"
+        sim_params.physx.contact_offset = self._cfg.ISAAC_GYM.PHYSX.CONTACT_OFFSET
+        sim_params.physx.rest_offset = self._cfg.ISAAC_GYM.PHYSX.REST_OFFSET
         sim_params.physx.num_position_iterations = self._cfg.ISAAC_GYM.PHYSX.NUM_POSITION_ITERATIONS
         sim_params.physx.num_velocity_iterations = self._cfg.ISAAC_GYM.PHYSX.NUM_VELOCITY_ITERATIONS
         sim_params.physx.max_depenetration_velocity = (
             self._cfg.ISAAC_GYM.PHYSX.MAX_DEPENETRATION_VELOCITY
         )
+        sim_params.physx.max_gpu_contact_pairs = self._cfg.ISAAC_GYM.PHYSX.MAX_GPU_CONTACT_PAIRS
         sim_params.physx.num_subscenes = self._cfg.ISAAC_GYM.PHYSX.NUM_SUBSCENES
         sim_params.physx.contact_collection = gymapi.ContactCollection(
             self._cfg.ISAAC_GYM.PHYSX.CONTACT_COLLECTION
+        )
+        sim_params.physx.default_buffer_size_multiplier = (
+            self._cfg.ISAAC_GYM.PHYSX.DEFAULT_BUFFER_SIZE_MULTIPLIER
         )
 
         return sim_params
