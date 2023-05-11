@@ -39,7 +39,7 @@ class Body(AttrsArrayTensor):
         "initial_dof_velocity": 1,
         "dof_target_position": 1,
         "dof_target_velocity": 1,
-        "dof_force": 1,
+        "dof_actuation_force": 1,
     }
     _SETATTR_WHITELIST = ("dof_state", "link_state")
 
@@ -76,7 +76,7 @@ class Body(AttrsArrayTensor):
         dof_armature=None,
         dof_target_position=None,
         dof_target_velocity=None,
-        dof_force=None,
+        dof_actuation_force=None,
     ):
         """ """
         self._init_callback()
@@ -118,7 +118,7 @@ class Body(AttrsArrayTensor):
 
         self.dof_target_position = dof_target_position
         self.dof_target_velocity = dof_target_velocity
-        self.dof_force = dof_force
+        self.dof_actuation_force = dof_actuation_force
 
         self.env_ids_reset_base_state = None
         self.env_ids_reset_dof_state = None
@@ -790,25 +790,25 @@ class Body(AttrsArrayTensor):
         self._dof_target_velocity = value
 
     @property
-    def dof_force(self):
+    def dof_actuation_force(self):
         """ """
-        return self._dof_force
+        return self._dof_actuation_force
 
-    @dof_force.setter
-    def dof_force(self, value):
+    @dof_actuation_force.setter
+    def dof_actuation_force(self, value):
         """ """
         if value is not None:
             value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
             if value.ndim not in (
-                self._ATTR_TENSOR_NDIM["dof_force"],
-                self._ATTR_TENSOR_NDIM["dof_force"] + 1,
+                self._ATTR_TENSOR_NDIM["dof_actuation_force"],
+                self._ATTR_TENSOR_NDIM["dof_actuation_force"] + 1,
             ):
                 raise ValueError(
-                    "'dof_force' must have a number of dimensions of "
-                    f"{self._ATTR_TENSOR_NDIM['dof_force']} or "
-                    f"{self._ATTR_TENSOR_NDIM['dof_force'] + 1}"
+                    "'dof_actuation_force' must have a number of dimensions of "
+                    f"{self._ATTR_TENSOR_NDIM['dof_actuation_force']} or "
+                    f"{self._ATTR_TENSOR_NDIM['dof_actuation_force'] + 1}"
                 )
-        self._dof_force = value
+        self._dof_actuation_force = value
 
     @property
     def env_ids_reset_base_state(self):
@@ -896,8 +896,8 @@ class Body(AttrsArrayTensor):
             self.dof_target_position = self.dof_target_position.to(device)
         if self.dof_target_velocity is not None:
             self.dof_target_velocity = self.dof_target_velocity.to(device)
-        if self.dof_force is not None:
-            self.dof_force = self.dof_force.to(device)
+        if self.dof_actuation_force is not None:
+            self.dof_actuation_force = self.dof_actuation_force.to(device)
 
         if self.env_ids_reset_base_state is not None:
             self.env_ids_reset_base_state = self.env_ids_reset_base_state.to(device)

@@ -1324,7 +1324,7 @@ class IsaacGym(Simulator):
                 for attr in (
                     "dof_target_position",
                     "dof_target_velocity",
-                    "dof_force",
+                    "dof_actuation_force",
                     "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
@@ -1369,7 +1369,7 @@ class IsaacGym(Simulator):
                     "For Isaac Gym, 'dof_target_velocity' can only be set in the VELOCITY_CONTROL "
                     f"mode: '{body.name}'"
                 )
-            if body.dof_force is not None and (
+            if body.dof_actuation_force is not None and (
                 body.dof_control_mode is None
                 or body.dof_control_mode.ndim == 0
                 and body.dof_control_mode != DoFControlMode.TORQUE_CONTROL
@@ -1377,8 +1377,8 @@ class IsaacGym(Simulator):
                 and DoFControlMode.TORQUE_CONTROL not in body.dof_control_mode
             ):
                 raise ValueError(
-                    "For Isaac Gym, 'dof_force' can only be set in the TORQUE_CONTROL mode: "
-                    f"'{body.name}'"
+                    "For Isaac Gym, 'dof_actuation_force' can only be set in the TORQUE_CONTROL "
+                    f"mode: '{body.name}'"
                 )
 
             # DriveMode is defaulted to DOF_MODE_NONE if dof_control_mode is None.
@@ -1416,10 +1416,10 @@ class IsaacGym(Simulator):
                         (1, 1),
                     )[self._dof_indices[body.name]] = dof_target_velocity
                 if body.dof_control_mode == DoFControlMode.TORQUE_CONTROL:
-                    if body.env_ids_load is None or body.dof_force.ndim == 1:
-                        dof_force = body.dof_force
+                    if body.env_ids_load is None or body.dof_actuation_force.ndim == 1:
+                        dof_actuation_force = body.dof_actuation_force
                     else:
-                        dof_force = body.dof_force[body.env_ids_load]
+                        dof_actuation_force = body.dof_actuation_force[body.env_ids_load]
                     torch.as_strided(
                         self._dof_actuation_force_buffer,
                         (
@@ -1429,7 +1429,7 @@ class IsaacGym(Simulator):
                             self._asset_num_dofs[body.name],
                         ),
                         (1, 1),
-                    )[self._dof_indices[body.name]] = dof_force
+                    )[self._dof_indices[body.name]] = dof_actuation_force
             if body.dof_control_mode.ndim == 1:
                 if DoFControlMode.POSITION_CONTROL in body.dof_control_mode:
                     if body.env_ids_load is None or body.dof_target_position.ndim == 1:
@@ -1478,12 +1478,12 @@ class IsaacGym(Simulator):
                         body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
                     ] = dof_target_velocity
                 if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
-                    if body.env_ids_load is None or body.dof_force.ndim == 1:
-                        dof_force = body.dof_force[
+                    if body.env_ids_load is None or body.dof_actuation_force.ndim == 1:
+                        dof_actuation_force = body.dof_actuation_force[
                             ..., body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
                         ]
                     else:
-                        dof_force = body.dof_force[
+                        dof_actuation_force = body.dof_actuation_force[
                             body.env_ids_load[:, None],
                             body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
                         ]
@@ -1499,7 +1499,7 @@ class IsaacGym(Simulator):
                     )[
                         self._dof_indices[body.name][:, None],
                         body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
-                    ] = dof_force
+                    ] = dof_actuation_force
 
         if reset_base_state:
             actor_indices = torch.cat(actor_indices_base)

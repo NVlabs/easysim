@@ -441,7 +441,7 @@ class IsaacSim(Simulator):
                 for attr in (
                     "dof_target_position",
                     "dof_target_velocity",
-                    "dof_force",
+                    "dof_actuation_force",
                     "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
@@ -457,8 +457,8 @@ class IsaacSim(Simulator):
             if body.dof_target_velocity is not None:
                 data = body.dof_target_velocity.expand((self._num_envs, -1))
                 self._articulation_views[body.name].set_dof_velocity_targets(data, indices)
-            if body.dof_force is not None:
-                data = body.dof_force.expand((self._num_envs, -1))
+            if body.dof_actuation_force is not None:
+                data = body.dof_actuation_force.expand((self._num_envs, -1))
                 self._articulation_views[body.name].set_dof_actuation_forces(data, indices)
 
         self._world.step(render=self._cfg.RENDER)

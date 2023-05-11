@@ -889,7 +889,7 @@ class Bullet(Simulator):
                     "dof_velocity_gain",
                     "dof_target_position",
                     "dof_target_velocity",
-                    "dof_force",
+                    "dof_actuation_force",
                     "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
@@ -942,13 +942,13 @@ class Bullet(Simulator):
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
                         kwargs["forces"] = body.get_attr_array("dof_max_force", 0)
-                    if body.dof_force is not None:
+                    if body.dof_actuation_force is not None:
                         if body.dof_control_mode != DoFControlMode.TORQUE_CONTROL:
                             raise ValueError(
-                                "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
-                                f"mode: '{body.name}'"
+                                "For Bullet, 'dof_actuation_force' can only be set in the "
+                                f"TORQUE_CONTROL mode: '{body.name}'"
                             )
-                        kwargs["forces"] = body.get_attr_tensor("dof_force", 0)
+                        kwargs["forces"] = body.get_attr_tensor("dof_actuation_force", 0)
                     self._p.setJointMotorControlArray(
                         self._body_ids[body.name],
                         self._dof_indices[body.name],
@@ -992,13 +992,13 @@ class Bullet(Simulator):
                         )
                     if "forces" in kwargs:
                         del kwargs["forces"]
-                    if body.dof_force is not None:
+                    if body.dof_actuation_force is not None:
                         if DoFControlMode.TORQUE_CONTROL not in body.dof_control_mode:
                             raise ValueError(
-                                "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
-                                f"mode: '{body.name}'"
+                                "For Bullet, 'dof_actuation_force' can only be set in the "
+                                f"TORQUE_CONTROL mode: '{body.name}'"
                             )
-                        kwargs["forces"] = body.get_attr_tensor("dof_force", 0)
+                        kwargs["forces"] = body.get_attr_tensor("dof_actuation_force", 0)
                     if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
                         self._p.setJointMotorControlArray(
                             self._body_ids[body.name],
@@ -1034,13 +1034,13 @@ class Bullet(Simulator):
                                 f"and VELOCITY_CONTROL modes: '{body.name}'"
                             )
                         kwargs["force"] = body.get_attr_array("dof_max_force", 0)
-                    if body.dof_force is not None:
+                    if body.dof_actuation_force is not None:
                         if body.dof_control_mode != DoFControlMode.TORQUE_CONTROL:
                             raise ValueError(
-                                "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL "
-                                f"mode: '{body.name}'"
+                                "For Bullet, 'dof_actuation_force' can only be set in the "
+                                f"TORQUE_CONTROL mode: '{body.name}'"
                             )
-                        kwargs["force"] = body.get_attr_tensor("dof_force", 0)
+                        kwargs["force"] = body.get_attr_tensor("dof_actuation_force", 0)
                     for i, j in enumerate(self._dof_indices[body.name]):
                         self._p.setJointMotorControl2(
                             self._body_ids[body.name],
@@ -1059,12 +1059,12 @@ class Bullet(Simulator):
                             f"VELOCITY_CONTROL modes: '{body.name}'"
                         )
                     if (
-                        body.dof_force is not None
+                        body.dof_actuation_force is not None
                         and DoFControlMode.TORQUE_CONTROL not in body.dof_control_mode
                     ):
                         raise ValueError(
-                            "For Bullet, 'dof_force' can only be set in the TORQUE_CONTROL mode: "
-                            f"'{body.name}'"
+                            "For Bullet, 'dof_actuation_force' can only be set in the "
+                            f"TORQUE_CONTROL mode: '{body.name}'"
                         )
                     for i, j in enumerate(self._dof_indices[body.name]):
                         if body.dof_control_mode[i] in (
@@ -1075,12 +1075,13 @@ class Bullet(Simulator):
                                 del kwargs["force"]
                             if body.dof_max_force is not None:
                                 kwargs["force"] = body.get_attr_array("dof_max_force", 0)
-                            if body.dof_force is not None and not np.isnan(
-                                body.get_attr_tensor("dof_force", 0)[i]
+                            if body.dof_actuation_force is not None and not np.isnan(
+                                body.get_attr_tensor("dof_actuation_force", 0)[i]
                             ):
                                 raise ValueError(
-                                    "For Bullet, 'dof_force' is required to be np.nan for DoF "
-                                    f"({i}) in POSITION_CONTROL and VELOCITY modes: {body.name}"
+                                    "For Bullet, 'dof_actuation_force' is required to be np.nan "
+                                    f"for DoF ({i}) in POSITION_CONTROL and VELOCITY modes: "
+                                    f"{body.name}"
                                 )
                             self._p.setJointMotorControl2(
                                 self._body_ids[body.name],
@@ -1091,8 +1092,8 @@ class Bullet(Simulator):
                         if body.dof_control_mode[i] == DoFControlMode.TORQUE_CONTROL:
                             if "force" in kwargs:
                                 del kwargs["force"]
-                            if body.dof_force is not None:
-                                kwargs["force"] = body.get_attr_tensor("dof_force", 0)
+                            if body.dof_actuation_force is not None:
+                                kwargs["force"] = body.get_attr_tensor("dof_actuation_force", 0)
                             if body.dof_max_force is not None and not np.isnan(
                                 body.get_attr_array("dof_max_force", 0)[i]
                             ):
