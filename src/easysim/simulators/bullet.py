@@ -174,10 +174,7 @@ class Bullet(Simulator):
                 )
 
         kwargs = {}
-        if (
-            body.simulator_config.bullet.use_self_collision is not None
-            and body.simulator_config.bullet.use_self_collision
-        ):
+        if body.bullet.use_self_collision is not None and body.bullet.use_self_collision:
             kwargs["flags"] = pybullet.URDF_USE_SELF_COLLISION
         if body.description_type is None:
             raise ValueError(f"'description_type' must not be None: '{body.name}'")
@@ -196,9 +193,7 @@ class Bullet(Simulator):
                 kwargs["globalScaling"] = body.get_attr_array("scale", 0)
                 if body.attr_array_dirty_flag["scale"]:
                     body.attr_array_dirty_flag["scale"] = False
-            self._body_ids[body.name] = self._p.loadURDF(
-                body.description_config.urdf.path, **kwargs
-            )
+            self._body_ids[body.name] = self._p.loadURDF(body.urdf.path, **kwargs)
         else:
             for attr in ("scale",):
                 if getattr(body, attr) is not None:
@@ -215,9 +210,9 @@ class Bullet(Simulator):
             kwargs_visual = {}
             kwargs_collision = {}
             if body.description_type == DescriptionType.SPHERE:
-                if body.description_config.sphere.radius is not None:
-                    kwargs_visual["radius"] = body.description_config.sphere.radius
-                    kwargs_collision["radius"] = body.description_config.sphere.radius
+                if body.sphere.radius is not None:
+                    kwargs_visual["radius"] = body.sphere.radius
+                    kwargs_collision["radius"] = body.sphere.radius
                 kwargs["baseVisualShapeIndex"] = self._p.createVisualShape(
                     pybullet.GEOM_SPHERE, **kwargs_visual
                 )
@@ -225,9 +220,9 @@ class Bullet(Simulator):
                     pybullet.GEOM_SPHERE, **kwargs_collision
                 )
             if body.description_type == DescriptionType.BOX:
-                if body.description_config.box.half_extent is not None:
-                    kwargs_visual["halfExtents"] = body.description_config.box.half_extent
-                    kwargs_collision["halfExtents"] = body.description_config.box.half_extent
+                if body.box.half_extent is not None:
+                    kwargs_visual["halfExtents"] = body.box.half_extent
+                    kwargs_collision["halfExtents"] = body.box.half_extent
                 kwargs["baseVisualShapeIndex"] = self._p.createVisualShape(
                     pybullet.GEOM_BOX, **kwargs_visual
                 )

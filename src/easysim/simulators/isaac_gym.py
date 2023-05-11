@@ -224,7 +224,7 @@ class IsaacGym(Simulator):
                 "use_mesh_materials",
                 "mesh_normal_mode",
             ):
-                value = getattr(body.simulator_config.isaac_gym, attr)
+                value = getattr(body.isaac_gym, attr)
                 if value is not None:
                     if attr == "vhacd_params":
                         for x in value:
@@ -262,27 +262,27 @@ class IsaacGym(Simulator):
                     f"'{body.name}'"
                 )
             if body.description_type == DescriptionType.SPHERE:
-                if body.description_config.sphere.radius is None:
+                if body.sphere.radius is None:
                     raise ValueError(
                         "For Isaac Gym, 'radius' must not be None if 'description_type' is set to "
                         f"SPHERE: '{body.name}'"
                     )
                 self._assets[body.name] = self._gym.create_sphere(
-                    self._sim, body.description_config.sphere.radius, options=asset_options
+                    self._sim, body.sphere.radius, options=asset_options
                 )
             if body.description_type == DescriptionType.BOX:
-                if body.description_config.box.half_extent is None:
+                if body.box.half_extent is None:
                     raise ValueError(
                         "For Isaac Gym, 'half_extent' must not be None if 'description_type' is set"
                         f"to BOX: '{body.name}'"
                     )
                 self._assets[body.name] = self._gym.create_box(
                     self._sim,
-                    *[x * 2 for x in body.description_config.box.half_extent],
+                    *[x * 2 for x in body.box.half_extent],
                     options=asset_options,
                 )
             if body.description_type == DescriptionType.URDF:
-                asset_root, asset_file = os.path.split(body.description_config.urdf.path)
+                asset_root, asset_file = os.path.split(body.urdf.path)
                 self._assets[body.name] = self._gym.load_asset(
                     self._sim, asset_root, asset_file, options=asset_options
                 )

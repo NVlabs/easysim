@@ -228,7 +228,7 @@ class IsaacSim(Simulator):
                     f"For Isaac Sim, 'description_type' only supports USD: '{body.name}'"
                 )
             add_reference_to_stage(
-                body.description_config.usd.path, f"{self._DEFAULT_ZERO_ENV_PATH}/{body.name}"
+                body.usd.path, f"{self._DEFAULT_ZERO_ENV_PATH}/{body.name}"
             )
 
     def _set_viewer(self):

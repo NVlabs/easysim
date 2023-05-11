@@ -5,7 +5,7 @@
 import torch
 import numpy as np
 
-from easysim.attrs import Attrs, AttrsArrayTensor, AttrsSimulatorConfig
+from easysim.attrs import Attrs, AttrsArrayTensor
 
 
 class Body(AttrsArrayTensor):
@@ -47,9 +47,11 @@ class Body(AttrsArrayTensor):
         self,
         name=None,
         description_type=None,
-        description_config=dict(),
+        sphere=dict(),
+        box=dict(),
+        urdf=dict(),
+        usd=dict(),
         use_fixed_base=None,
-        simulator_config=dict(),
         env_ids_load=None,
         initial_base_position=None,
         initial_base_velocity=None,
@@ -77,15 +79,22 @@ class Body(AttrsArrayTensor):
         dof_target_position=None,
         dof_target_velocity=None,
         dof_actuation_force=None,
+        bullet=dict(),
+        isaac_gym=dict(),
+        isaac_sim=dict(),
     ):
         """ """
         self._init_callback()
 
         self.name = name
         self.description_type = description_type
-        self._description_config = DescriptionConfig(**description_config)
+
+        self._sphere = Sphere(**sphere)
+        self._box = Box(**box)
+        self._urdf = URDF(**urdf)
+        self._usd = USD(**usd)
+
         self.use_fixed_base = use_fixed_base
-        self._simulator_config = SimulatorConfig(**simulator_config)
 
         self.env_ids_load = env_ids_load
         self.initial_base_position = initial_base_position
@@ -127,6 +136,10 @@ class Body(AttrsArrayTensor):
         self.link_state = None
         self.contact_id = None
 
+        self._bullet = Bullet(**bullet)
+        self._isaac_gym = IsaacGym(**isaac_gym)
+        self._isaac_sim = IsaacSim(**isaac_sim)
+
     def _init_callback(self):
         """ """
         self._callback_collect_dof_state = None
@@ -153,9 +166,24 @@ class Body(AttrsArrayTensor):
         self._description_type = value
 
     @property
-    def description_config(self):
+    def sphere(self):
         """ """
-        return self._description_config
+        return self._sphere
+
+    @property
+    def box(self):
+        """ """
+        return self._box
+
+    @property
+    def urdf(self):
+        """ """
+        return self._urdf
+
+    @property
+    def usd(self):
+        """ """
+        return self._usd
 
     @property
     def use_fixed_base(self):
@@ -166,11 +194,6 @@ class Body(AttrsArrayTensor):
     def use_fixed_base(self, value):
         """ """
         self._use_fixed_base = value
-
-    @property
-    def simulator_config(self):
-        """ """
-        return self._simulator_config
 
     @property
     def env_ids_load(self):
@@ -878,6 +901,21 @@ class Body(AttrsArrayTensor):
             value = np.asanyarray(value, dtype=np.int64)
         self._contact_id = value
 
+    @property
+    def bullet(self):
+        """ """
+        return self._bullet
+
+    @property
+    def isaac_gym(self):
+        """ """
+        return self._isaac_gym
+
+    @property
+    def isaac_sim(self):
+        """ """
+        return self._isaac_sim
+
     def _set_attr_device(self, device):
         """ """
         if self.env_ids_load is not None:
@@ -904,6 +942,10 @@ class Body(AttrsArrayTensor):
         if self.env_ids_reset_dof_state is not None:
             self.env_ids_reset_dof_state = self.env_ids_reset_dof_state.to(device)
 
+        self.bullet.set_device(device)
+        self.isaac_gym.set_device(device)
+        self.isaac_sim.set_device(device)
+
     def set_callback_collect_dof_state(self, callback):
         """ """
         self._callback_collect_dof_state = callback
@@ -913,9 +955,91 @@ class Body(AttrsArrayTensor):
         self._callback_collect_link_state = callback
 
 
-class BulletConfig(Attrs):
+class Sphere(Attrs):
     """ """
 
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, radius=None):
+        """ """
+        self.radius = radius
+
+    @property
+    def radius(self):
+        """ """
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        """ """
+        self._radius = value
+
+
+class Box(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, half_extent=None):
+        """ """
+        self.half_extent = half_extent
+
+    @property
+    def half_extent(self):
+        """ """
+        return self._half_extent
+
+    @half_extent.setter
+    def half_extent(self, value):
+        """ """
+        self._half_extent = value
+
+
+class URDF(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, path=None):
+        """ """
+        self.path = path
+
+    @property
+    def path(self):
+        """ """
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        """ """
+        self._path = value
+
+
+class USD(Attrs):
+    """ """
+
+    _SETATTR_WHITELIST = ()
+
+    def _init(self, path=None):
+        """ """
+        self.path = path
+
+    @property
+    def path(self):
+        """ """
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        """ """
+        self._path = value
+
+
+class Bullet(AttrsArrayTensor):
+    """ """
+
+    _ATTR_ARRAY_NDIM = {}
+    _ATTR_TENSOR_NDIM = {}
     _SETATTR_WHITELIST = ()
 
     def _init(self, use_self_collision=None):
@@ -932,10 +1056,16 @@ class BulletConfig(Attrs):
         """ """
         self._use_self_collision = value
 
+    def _set_attr_device(self, device):
+        """ """
+        pass
 
-class IsaacGymConfig(Attrs):
+
+class IsaacGym(AttrsArrayTensor):
     """ """
 
+    _ATTR_ARRAY_NDIM = {}
+    _ATTR_TENSOR_NDIM = {}
     _SETATTR_WHITELIST = ()
 
     def _init(
@@ -1039,133 +1169,22 @@ class IsaacGymConfig(Attrs):
         """ """
         self._mesh_normal_mode = value
 
+    def _set_attr_device(self, device):
+        """ """
+        pass
 
-class IsaacSimConfig(Attrs):
+
+class IsaacSim(AttrsArrayTensor):
     """ """
 
+    _ATTR_ARRAY_NDIM = {}
+    _ATTR_TENSOR_NDIM = {}
     _SETATTR_WHITELIST = ()
 
     def _init(self):
         """ """
         pass
 
-
-class DescriptionConfig(Attrs):
-    """ """
-
-    _SETATTR_WHITELIST = ()
-
-    def _init(self, sphere=dict(), box=dict(), urdf=dict(), usd=dict()):
+    def _set_attr_device(self, device):
         """ """
-        self._sphere = SphereConfig(**sphere)
-        self._box = BoxConfig(**box)
-        self._urdf = URDFConfig(**urdf)
-        self._usd = USDConfig(**usd)
-
-    @property
-    def sphere(self):
-        """ """
-        return self._sphere
-
-    @property
-    def box(self):
-        """ """
-        return self._box
-
-    @property
-    def urdf(self):
-        """ """
-        return self._urdf
-
-    @property
-    def usd(self):
-        """ """
-        return self._usd
-
-
-class SphereConfig(Attrs):
-    """ """
-
-    _SETATTR_WHITELIST = ()
-
-    def _init(self, radius=None):
-        """ """
-        self.radius = radius
-
-    @property
-    def radius(self):
-        """ """
-        return self._radius
-
-    @radius.setter
-    def radius(self, value):
-        """ """
-        self._radius = value
-
-
-class BoxConfig(Attrs):
-    """ """
-
-    _SETATTR_WHITELIST = ()
-
-    def _init(self, half_extent=None):
-        """ """
-        self.half_extent = half_extent
-
-    @property
-    def half_extent(self):
-        """ """
-        return self._half_extent
-
-    @half_extent.setter
-    def half_extent(self, value):
-        """ """
-        self._half_extent = value
-
-
-class URDFConfig(Attrs):
-    """ """
-
-    _SETATTR_WHITELIST = ()
-
-    def _init(self, path=None):
-        """ """
-        self.path = path
-
-    @property
-    def path(self):
-        """ """
-        return self._path
-
-    @path.setter
-    def path(self, value):
-        """ """
-        self._path = value
-
-
-class USDConfig(Attrs):
-    """ """
-
-    _SETATTR_WHITELIST = ()
-
-    def _init(self, path=None):
-        """ """
-        self.path = path
-
-    @property
-    def path(self):
-        """ """
-        return self._path
-
-    @path.setter
-    def path(self, value):
-        """ """
-        self._path = value
-
-
-class SimulatorConfig(AttrsSimulatorConfig):
-    """ """
-
-    _BULLET_CONFIG = BulletConfig
-    _ISAAC_GYM_CONFIG = IsaacGymConfig
-    _ISAAC_SIM_CONFIG = IsaacSimConfig
+        pass
