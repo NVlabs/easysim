@@ -16,6 +16,8 @@ ISAAC_GYM_CONFIG.SPACING = 2.0
 
 ISAAC_GYM_CONFIG.ENABLE_CAMERA_SENSORS = False
 
+ISAAC_GYM_CONFIG.ENABLE_DOF_FORCE_SENSORS = False
+
 # ---------------------------------------------------------------------------- #
 # Isaac Gym PhysX config
 # ---------------------------------------------------------------------------- #

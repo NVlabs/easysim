@@ -136,9 +136,9 @@ class Body(AttrsArrayTensor):
         self.link_state = None
         self.contact_id = None
 
-        self._bullet = Bullet(**bullet)
-        self._isaac_gym = IsaacGym(**isaac_gym)
-        self._isaac_sim = IsaacSim(**isaac_sim)
+        self._bullet = Bullet(body=self, **bullet)
+        self._isaac_gym = IsaacGym(body=self, **isaac_gym)
+        self._isaac_sim = IsaacSim(body=self, **isaac_sim)
 
     def _init_callback(self):
         """ """
@@ -1042,8 +1042,10 @@ class Bullet(AttrsArrayTensor):
     _ATTR_TENSOR_NDIM = {}
     _SETATTR_WHITELIST = ()
 
-    def _init(self, use_self_collision=None):
+    def _init(self, body, use_self_collision=None):
         """ """
+        self._body = body
+
         self.use_self_collision = use_self_collision
 
     @property
@@ -1066,10 +1068,11 @@ class IsaacGym(AttrsArrayTensor):
 
     _ATTR_ARRAY_NDIM = {}
     _ATTR_TENSOR_NDIM = {}
-    _SETATTR_WHITELIST = ()
+    _SETATTR_WHITELIST = ("dof_force",)
 
     def _init(
         self,
+        body,
         flip_visual_attachments=None,
         disable_gravity=None,
         override_com=None,
@@ -1080,6 +1083,10 @@ class IsaacGym(AttrsArrayTensor):
         mesh_normal_mode=None,
     ):
         """ """
+        self._init_callback()
+
+        self._body = body
+
         self.flip_visual_attachments = flip_visual_attachments
         self.disable_gravity = disable_gravity
         self.override_com = override_com
@@ -1088,6 +1095,12 @@ class IsaacGym(AttrsArrayTensor):
         self.vhacd_params = vhacd_params
         self.use_mesh_materials = use_mesh_materials
         self.mesh_normal_mode = mesh_normal_mode
+
+        self.dof_force = None
+
+    def _init_callback(self):
+        """ """
+        self._callback_collect_dof_force = None
 
     @property
     def flip_visual_attachments(self):
@@ -1169,6 +1182,24 @@ class IsaacGym(AttrsArrayTensor):
         """ """
         self._mesh_normal_mode = value
 
+    @property
+    def dof_force(self):
+        """ """
+        if self._dof_force is None and self._callback_collect_dof_force is not None:
+            self._callback_collect_dof_force(self._body)
+        return self._dof_force
+
+    @dof_force.setter
+    def dof_force(self, value):
+        """ """
+        if value is not None:
+            value = torch.as_tensor(value, dtype=torch.float32, device=self._device)
+        self._dof_force = value
+
+    def set_callback_collect_dof_force(self, callback):
+        """ """
+        self._callback_collect_dof_force = callback
+
     def _set_attr_device(self, device):
         """ """
         pass
@@ -1181,9 +1212,9 @@ class IsaacSim(AttrsArrayTensor):
     _ATTR_TENSOR_NDIM = {}
     _SETATTR_WHITELIST = ()
 
-    def _init(self):
+    def _init(self, body):
         """ """
-        pass
+        self._body = body
 
     def _set_attr_device(self, device):
         """ """

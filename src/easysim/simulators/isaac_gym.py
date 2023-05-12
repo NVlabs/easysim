@@ -732,6 +732,7 @@ class IsaacGym(Simulator):
         for body in self._scene.bodies:
             body.set_callback_collect_dof_state(self._collect_dof_state)
             body.set_callback_collect_link_state(self._collect_link_state)
+            body.isaac_gym.set_callback_collect_dof_force(self._collect_dof_force)
 
     def _collect_dof_state(self, body):
         """ """
@@ -793,6 +794,40 @@ class IsaacGym(Simulator):
                 ),
                 (13, 13, 1),
             )[self._rigid_body_indices[body.name]]
+
+    def _collect_dof_force(self, body):
+        """ """
+        if not self._cfg.ISAAC_GYM.ENABLE_DOF_FORCE_SENSORS:
+            raise ValueError(
+                "For Isaac Gym, ENABLE_DOF_FORCE_SENSORS must be True if collecting DoF force"
+            )
+
+        if not self._dof_force_refreshed:
+            self._gym.refresh_dof_force_tensor(self._sim)
+            self._dof_force_refreshed = True
+
+        if self._asset_num_dofs[body.name] > 0:
+            if body.env_ids_load is None:
+                body.isaac_gym.dof_force = torch.as_strided(
+                    self._dof_force,
+                    (
+                        len(self._dof_force) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                    ),
+                    (1, 1),
+                )[self._dof_indices[body.name]]
+            else:
+                body.isaac_gym.dof_force = self._dof_force.new_zeros(
+                    (self._num_envs, self._asset_num_dofs[body.name], 2)
+                )
+                body.isaac_gym.dof_force[body.env_ids_load] = torch.as_strided(
+                    self._dof_force,
+                    (
+                        len(self._dof_force) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                    ),
+                    (2, 2),
+                )[self._dof_indices[body.name]]
 
     def _set_camera_props(self):
         """ """
@@ -1003,6 +1038,10 @@ class IsaacGym(Simulator):
             self._initial_dof_state = None
         else:
             self._initial_dof_state = self._dof_state.clone()
+
+        if self._cfg.ISAAC_GYM.ENABLE_DOF_FORCE_SENSORS:
+            dof_force = self._gym.acquire_dof_force_tensor(self._sim)
+            self._dof_force = gymtorch.wrap_tensor(dof_force)
 
     def _set_viewer(self):
         """ """
@@ -1276,9 +1315,11 @@ class IsaacGym(Simulator):
         for body in self._scene.bodies:
             body.dof_state = None
             body.link_state = None
+            body.isaac_gym.dof_force = None
 
         self._dof_state_refreshed = False
         self._link_state_refreshed = False
+        self._dof_force_refreshed = False
 
     def _clear_image(self):
         """ """
