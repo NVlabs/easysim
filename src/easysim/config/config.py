@@ -14,7 +14,6 @@ from easysim.config.bullet import BULLET_CONFIG
 from easysim.config.isaac_gym import ISAAC_GYM_CONFIG
 from easysim.config.isaac_sim import ISAAC_SIM_CONFIG
 
-
 _C = CN()
 
 # ---------------------------------------------------------------------------- #
@@ -76,7 +75,6 @@ _C.SIM.ISAAC_GYM = ISAAC_GYM_CONFIG
 # Isaac Sim config
 # ---------------------------------------------------------------------------- #
 _C.SIM.ISAAC_SIM = ISAAC_SIM_CONFIG
-
 
 cfg = _C
 
