@@ -91,6 +91,7 @@ class IsaacGym(Simulator):
         self._gym = gymapi.acquire_gym()
 
         self._created = False
+        self._allows_reset = True
         self._counter_render = 0
         self._render_time_step = max(
             1.0 / self._cfg.ISAAC_GYM.VIEWER.RENDER_FRAME_RATE, self._cfg.TIME_STEP
@@ -175,6 +176,12 @@ class IsaacGym(Simulator):
 
             self._created = True
 
+        if self._cfg.USE_GPU_PIPELINE and not self._allows_reset:
+            raise RuntimeError(
+                "Consecutive 'reset()' without 'step()' may lead to unexpected simulation "
+                "artifacts and should be avoided"
+            )
+
         if env_ids is None:
             env_ids = torch.arange(self._num_envs, device=self.device)
 
@@ -184,6 +191,9 @@ class IsaacGym(Simulator):
         self._clear_state()
         self._clear_image()
         self._contact = None
+
+        if self._cfg.USE_GPU_PIPELINE:
+            self._allows_reset = False
 
     def _create_sim(self, compute_device, graphics_device, physics_engine, sim_params):
         """ """
@@ -1113,11 +1123,23 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        for body in self._scene.bodies:
+        actor_indices_base = []
+        actor_indices_dof = []
+
+        for b, body in enumerate(self._scene.bodies):
             self._reset_base_state_buffer(body)
 
+            if body.env_ids_reset_base_state is not None:
+                self._check_body_env_ids_reset(body, "env_ids_reset_base_state", env_ids)
+                actor_indices_base.append(self._actor_indices[body.env_ids_reset_base_state, b])
+                body.env_ids_reset_base_state = None
+
             if self._asset_num_dofs[body.name] == 0:
-                for attr in ("initial_dof_position", "initial_dof_velocity"):
+                for attr in (
+                    "initial_dof_position",
+                    "initial_dof_velocity",
+                    "env_ids_reset_dof_state",
+                ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
@@ -1125,17 +1147,25 @@ class IsaacGym(Simulator):
             else:
                 self._reset_dof_state_buffer(body)
 
+                if body.env_ids_reset_dof_state is not None:
+                    self._check_body_env_ids_reset(body, "env_ids_reset_dof_state", env_ids)
+                    actor_indices_dof.append(self._actor_indices[body.env_ids_reset_dof_state, b])
+                    body.env_ids_reset_dof_state = None
+
         # Reset base state.
         if self._actor_root_state is not None:
             actor_indices = self._actor_indices[env_ids].view(-1)
             if self._actor_indices_need_filter:
                 actor_indices = actor_indices[actor_indices != -1]
-            self._gym.set_actor_root_state_tensor_indexed(
-                self._sim,
-                gymtorch.unwrap_tensor(self._actor_root_state),
-                gymtorch.unwrap_tensor(actor_indices),
-                len(actor_indices),
-            )
+            if len(actor_indices_base) > 0:
+                actor_indices = torch.cat([actor_indices] + actor_indices_base)
+            if len(actor_indices) > 0:
+                self._gym.set_actor_root_state_tensor_indexed(
+                    self._sim,
+                    gymtorch.unwrap_tensor(self._actor_root_state),
+                    gymtorch.unwrap_tensor(actor_indices),
+                    len(actor_indices),
+                )
 
         # Reset DoF state.
         if self._dof_state is not None:
@@ -1145,12 +1175,15 @@ class IsaacGym(Simulator):
             ].view(-1)
             if self._actor_indices_need_filter:
                 actor_indices = actor_indices[actor_indices != -1]
-            self._gym.set_dof_state_tensor_indexed(
-                self._sim,
-                gymtorch.unwrap_tensor(self._dof_state),
-                gymtorch.unwrap_tensor(actor_indices),
-                len(actor_indices),
-            )
+            if len(actor_indices_dof) > 0:
+                actor_indices = torch.cat([actor_indices] + actor_indices_dof)
+            if len(actor_indices) > 0:
+                self._gym.set_dof_state_tensor_indexed(
+                    self._sim,
+                    gymtorch.unwrap_tensor(self._dof_state),
+                    gymtorch.unwrap_tensor(actor_indices),
+                    len(actor_indices),
+                )
 
         self._check_and_update_body_props(env_ids=env_ids)
 
@@ -1223,6 +1256,18 @@ class IsaacGym(Simulator):
             ),
             (2, 2),
         )[self._dof_indices[body.name]] = initial_dof_velocity
+
+    def _check_body_env_ids_reset(self, body, attr, env_ids):
+        """ """
+        if body.env_ids_load is not None and not torch.all(
+            torch.isin(getattr(body, attr), body.env_ids_load)
+        ):
+            raise ValueError(
+                f"'{attr}' must be a subset of 'env_ids_load' for non-None 'env_ids_load': "
+                f"'{body.name}'"
+            )
+        if torch.any(torch.isin(getattr(body, attr), env_ids)):
+            raise ValueError(f"'{attr}' and 'env_ids' must be disjoint: '{body.name}'")
 
     def _check_and_update_body_props(self, env_ids=None):
         """ """
@@ -1341,52 +1386,18 @@ class IsaacGym(Simulator):
 
         self._check_and_update_body_props()
 
-        reset_base_state = False
-        reset_dof_state = False
-        actor_indices_base = []
-        actor_indices_dof = []
-
-        for b, body in enumerate(self._scene.bodies):
-            if body.env_ids_reset_base_state is not None:
-                if body.env_ids_load is not None and not torch.all(
-                    torch.isin(body.env_ids_reset_base_state, body.env_ids_load)
-                ):
-                    raise ValueError(
-                        "'env_ids_reset_base_state' must be a subset of 'env_ids_load' for "
-                        f"non-None 'env_ids_load': '{body.name}'"
-                    )
-                self._reset_base_state_buffer(body)
-                if not reset_base_state:
-                    reset_base_state = True
-                actor_indices_base.append(self._actor_indices[body.env_ids_reset_base_state, b])
-                body.env_ids_reset_base_state = None
-
+        for body in self._scene.bodies:
             if self._asset_num_dofs[body.name] == 0:
                 for attr in (
                     "dof_target_position",
                     "dof_target_velocity",
                     "dof_actuation_force",
-                    "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
-
-            if body.env_ids_reset_dof_state is not None:
-                if body.env_ids_load is not None and not torch.all(
-                    torch.isin(body.env_ids_reset_dof_state, body.env_ids_load)
-                ):
-                    raise ValueError(
-                        "'env_ids_reset_dof_state' must be a subset of 'env_ids_load' for non-None "
-                        f"'env_ids_load': '{body.name}'"
-                    )
-                self._reset_dof_state_buffer(body)
-                if not reset_dof_state:
-                    reset_dof_state = True
-                actor_indices_dof.append(self._actor_indices[body.env_ids_reset_dof_state, b])
-                body.env_ids_reset_dof_state = None
 
             if body.dof_target_position is not None and (
                 body.dof_control_mode is None
@@ -1542,24 +1553,6 @@ class IsaacGym(Simulator):
                         body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
                     ] = dof_actuation_force
 
-        if reset_base_state:
-            actor_indices = torch.cat(actor_indices_base)
-            self._gym.set_actor_root_state_tensor_indexed(
-                self._sim,
-                gymtorch.unwrap_tensor(self._actor_root_state),
-                gymtorch.unwrap_tensor(actor_indices),
-                len(actor_indices),
-            )
-
-        if reset_dof_state:
-            actor_indices = torch.cat(actor_indices_dof)
-            self._gym.set_dof_state_tensor_indexed(
-                self._sim,
-                gymtorch.unwrap_tensor(self._dof_state),
-                gymtorch.unwrap_tensor(actor_indices),
-                len(actor_indices),
-            )
-
         if self._dof_state is not None:
             self._gym.set_dof_position_target_tensor(
                 self._sim, gymtorch.unwrap_tensor(self._dof_position_target_buffer)
@@ -1579,6 +1572,9 @@ class IsaacGym(Simulator):
         self._clear_state()
         self._clear_image()
         self._contact = None
+
+        if self._cfg.USE_GPU_PIPELINE:
+            self._allows_reset = True
 
         if self._viewer:
             if self._gym.query_viewer_has_closed(self._viewer):
