@@ -529,14 +529,12 @@ class Bullet(Simulator):
         kwargs = {}
         if (
             not dirty_only
-            and not body.attr_array_default_flag["link_linear_damping"]
             and body.link_linear_damping is not None
             or body.attr_array_dirty_flag["link_linear_damping"]
         ):
             kwargs["linearDamping"] = body.get_attr_array("link_linear_damping", 0)
         if (
             not dirty_only
-            and not body.attr_array_default_flag["link_angular_damping"]
             and body.link_angular_damping is not None
             or body.attr_array_dirty_flag["link_angular_damping"]
         ):
