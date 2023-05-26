@@ -30,6 +30,7 @@ class Bullet(Simulator):
     _ATTR_DOF_DYNAMICS = (
         "dof_lower_limit",
         "dof_upper_limit",
+        "dof_max_velocity",
     )
     _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
     _ATTR_VIEW_MATRIX = ("position", "target", "up_vector", "orientation")
