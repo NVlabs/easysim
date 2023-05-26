@@ -252,6 +252,8 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.linear_damping = body.link_linear_damping
+            else:
+                body.link_linear_damping = asset_options.linear_damping
             if body.link_angular_damping is not None:
                 if body.link_angular_damping.ndim != 0:
                     raise ValueError(
@@ -259,6 +261,8 @@ class IsaacGym(Simulator):
                         f"0: '{body.name}'"
                     )
                 asset_options.angular_damping = body.link_angular_damping
+            else:
+                body.link_angular_damping = asset_options.angular_damping
 
             if body.description_type is None:
                 raise ValueError(f"'description_type' must not be None: '{body.name}'")
