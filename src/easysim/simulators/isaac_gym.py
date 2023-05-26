@@ -670,7 +670,7 @@ class IsaacGym(Simulator):
                 self._envs[idx], self._actor_handles[idx][body.name], i, link_segmentation_id[i]
             )
 
-    def _set_dof_props(self, body, idx, set_drive_mode=True):
+    def _set_dof_props(self, body, idx):
         """ """
         dof_props = self._gym.get_actor_dof_properties(
             self._envs[idx], self._actor_handles[idx][body.name]
@@ -693,16 +693,13 @@ class IsaacGym(Simulator):
             or body.attr_array_dirty_flag["dof_upper_limit"]
         ):
             dof_props["upper"] = body.get_attr_array("dof_upper_limit", idx)
-        if set_drive_mode:
-            if body.dof_control_mode is not None:
-                if body.dof_control_mode.ndim == 0:
-                    dof_props["driveMode"] = self._DOF_CONTROL_MODE_MAP[
-                        body.dof_control_mode.item()
-                    ]
-                if body.dof_control_mode.ndim == 1:
-                    dof_props["driveMode"] = [
-                        self._DOF_CONTROL_MODE_MAP[x] for x in body.dof_control_mode
-                    ]
+        if not body.attr_array_locked["dof_control_mode"] and body.dof_control_mode is not None:
+            if body.dof_control_mode.ndim == 0:
+                dof_props["driveMode"] = self._DOF_CONTROL_MODE_MAP[body.dof_control_mode.item()]
+            if body.dof_control_mode.ndim == 1:
+                dof_props["driveMode"] = [
+                    self._DOF_CONTROL_MODE_MAP[x] for x in body.dof_control_mode
+                ]
         if (
             not body.attr_array_locked["dof_max_velocity"]
             and body.dof_max_velocity is not None
@@ -1343,7 +1340,7 @@ class IsaacGym(Simulator):
                             mask |= body.attr_array_dirty_mask[attr]
                     env_ids_masked = np.nonzero(mask)[0]
                     for idx in env_ids_masked:
-                        self._set_dof_props(body, idx, set_drive_mode=False)
+                        self._set_dof_props(body, idx)
                     for attr in self._ATTR_DOF_PROPS:
                         if body.attr_array_dirty_flag[attr]:
                             body.attr_array_dirty_flag[attr] = False
