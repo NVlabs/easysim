@@ -59,7 +59,9 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         self.pre_reset(env_ids, **kwargs)
 
-        self._simulator.reset(env_ids)
+        callback_post_load = lambda: self.callback_post_load(env_ids)
+
+        self._simulator.reset(env_ids, callback_post_load)
 
         observation = self.post_reset(env_ids, **kwargs)
 
@@ -68,6 +70,10 @@ class SimulatorEnv(gym.Env, abc.ABC):
     @abc.abstractmethod
     def pre_reset(self, env_ids, **kwargs):
         """ """
+
+    def callback_post_load(self, env_ids):
+        """ """
+        pass
 
     @abc.abstractmethod
     def post_reset(self, env_ids, **kwargs):

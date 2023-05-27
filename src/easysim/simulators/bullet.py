@@ -65,7 +65,7 @@ class Bullet(Simulator):
         """ """
         return self._graphics_device
 
-    def reset(self, env_ids):
+    def reset(self, env_ids, callback_post_load):
         """ """
         if not self._connected:
             if self._cfg.RENDER:
@@ -108,7 +108,14 @@ class Bullet(Simulator):
 
             for body in self._scene.bodies:
                 self._load_body(body)
-                self._cache_body_and_set_control_and_props(body)
+                self._load_body_props(body)
+                self._cache_body(body)
+
+            callback_post_load()
+
+            for body in self._scene.bodies:
+                self._reset_body_state(body)
+                self._set_body_control_and_props(body)
                 self._set_body_callback(body)
 
             self._projection_matrix = {}
@@ -241,6 +248,65 @@ class Bullet(Simulator):
 
         self._num_links[body.name] = self._p.getNumJoints(self._body_ids[body.name]) + 1
 
+        body.contact_id = [self._body_ids[body.name]]
+
+    def _load_body_props(self, body):
+        """ """
+        if body.env_ids_load is not None and len(body.env_ids_load) == 0:
+            return
+
+        if any(
+            getattr(body, x) is None
+            for x in self._ATTR_LINK_DYNAMICS
+            if x not in ("link_linear_damping", "link_angular_damping")
+        ):
+            dynamics_info = [
+                self._p.getDynamicsInfo(self._body_ids[body.name], i)
+                for i in range(-1, self._num_links[body.name] - 1)
+            ]
+            if body.link_lateral_friction is None:
+                body.link_lateral_friction = [[x[1] for x in dynamics_info]]
+                body.attr_array_default_flag["link_lateral_friction"] = True
+            if body.link_spinning_friction is None:
+                body.link_spinning_friction = [[x[7] for x in dynamics_info]]
+                body.attr_array_default_flag["link_spinning_friction"] = True
+            if body.link_rolling_friction is None:
+                body.link_rolling_friction = [[x[6] for x in dynamics_info]]
+                body.attr_array_default_flag["link_rolling_friction"] = True
+            if body.link_restitution is None:
+                body.link_restitution = [[x[5] for x in dynamics_info]]
+                body.attr_array_default_flag["link_restitution"] = True
+
+        if body.link_color is None:
+            visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
+            body.link_color = [[x[7] for x in visual_data]]
+            body.attr_array_default_flag["link_color"] = True
+
+        if len(self._dof_indices[body.name]) > 0 and any(
+            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS
+        ):
+            joint_info = [
+                self._p.getJointInfo(self._body_ids[body.name], j)
+                for j in self._dof_indices[body.name]
+            ]
+            if body.dof_lower_limit is None:
+                body.dof_lower_limit = [[x[8] for x in joint_info]]
+                body.attr_array_default_flag["dof_lower_limit"] = True
+            if body.dof_upper_limit is None:
+                body.dof_upper_limit = [[x[9] for x in joint_info]]
+                body.attr_array_default_flag["dof_upper_limit"] = True
+            if body.dof_max_velocity is None:
+                body.dof_max_velocity = [[x[11] for x in joint_info]]
+                body.attr_array_default_flag["dof_max_velocity"] = True
+
+    def _cache_body(self, body):
+        """ """
+        x = type(body)()
+        x.name = body.name
+        self._scene_cache.add_body(x)
+
+    def _reset_body_state(self, body):
+        """ """
         # Reset base state.
         if body.initial_base_position is not None:
             self._reset_base_position(body)
@@ -259,8 +325,6 @@ class Bullet(Simulator):
                 "For Bullet, cannot reset 'initial_dof_velocity' without resetting "
                 f"'initial_dof_position': '{body.name}'"
             )
-
-        body.contact_id = [self._body_ids[body.name]]
 
     def _reset_base_position(self, body):
         """ """
@@ -306,12 +370,8 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
                 )
 
-    def _cache_body_and_set_control_and_props(self, body):
+    def _set_body_control_and_props(self, body):
         """ """
-        x = type(body)()
-        x.name = body.name
-        self._scene_cache.add_body(x)
-
         if body.env_ids_load is not None and len(body.env_ids_load) == 0:
             body.lock_attr_array()
             return
@@ -386,63 +446,20 @@ class Bullet(Simulator):
             self._set_link_collision_filter(body)
 
         if any(
-            not body.attr_array_default_flag[x] and getattr(body, x) is not None
+            not body.attr_array_default_flag[x]
+            if x not in ("link_linear_damping", "link_angular_damping")
+            else getattr(body, x) is not None
             for x in self._ATTR_LINK_DYNAMICS
         ):
             self._set_link_dynamics(body)
 
-        if not body.attr_array_default_flag["link_color"] and body.link_color is not None:
+        if not body.attr_array_default_flag["link_color"]:
             self._set_link_color(body)
 
         if len(self._dof_indices[body.name]) > 0 and any(
-            not body.attr_array_default_flag[x] and getattr(body, x) is not None
-            for x in self._ATTR_DOF_DYNAMICS
+            not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS
         ):
             self._set_dof_dynamics(body)
-
-        if any(
-            getattr(body, x) is None
-            for x in self._ATTR_LINK_DYNAMICS
-            if x not in ("link_linear_damping", "link_angular_damping")
-        ):
-            dynamics_info = [
-                self._p.getDynamicsInfo(self._body_ids[body.name], i)
-                for i in range(-1, self._num_links[body.name] - 1)
-            ]
-            if body.link_lateral_friction is None:
-                body.link_lateral_friction = [[x[1] for x in dynamics_info]]
-                body.attr_array_default_flag["link_lateral_friction"] = True
-            if body.link_spinning_friction is None:
-                body.link_spinning_friction = [[x[7] for x in dynamics_info]]
-                body.attr_array_default_flag["link_spinning_friction"] = True
-            if body.link_rolling_friction is None:
-                body.link_rolling_friction = [[x[6] for x in dynamics_info]]
-                body.attr_array_default_flag["link_rolling_friction"] = True
-            if body.link_restitution is None:
-                body.link_restitution = [[x[5] for x in dynamics_info]]
-                body.attr_array_default_flag["link_restitution"] = True
-
-        if body.link_color is None:
-            visual_data = self._p.getVisualShapeData(self._body_ids[body.name])
-            body.link_color = [[x[7] for x in visual_data]]
-            body.attr_array_default_flag["link_color"] = True
-
-        if len(self._dof_indices[body.name]) > 0 and any(
-            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS
-        ):
-            joint_info = [
-                self._p.getJointInfo(self._body_ids[body.name], j)
-                for j in self._dof_indices[body.name]
-            ]
-            if body.dof_lower_limit is None:
-                body.dof_lower_limit = [[x[8] for x in joint_info]]
-                body.attr_array_default_flag["dof_lower_limit"] = True
-            if body.dof_upper_limit is None:
-                body.dof_upper_limit = [[x[9] for x in joint_info]]
-                body.attr_array_default_flag["dof_upper_limit"] = True
-            if body.dof_max_velocity is None:
-                body.dof_max_velocity = [[x[11] for x in joint_info]]
-                body.attr_array_default_flag["dof_max_velocity"] = True
 
         body.lock_attr_array()
 
@@ -493,28 +510,24 @@ class Bullet(Simulator):
         if (
             not dirty_only
             and not body.attr_array_default_flag["link_lateral_friction"]
-            and body.link_lateral_friction is not None
             or body.attr_array_dirty_flag["link_lateral_friction"]
         ):
             kwargs["lateralFriction"] = body.get_attr_array("link_lateral_friction", 0)
         if (
             not dirty_only
             and not body.attr_array_default_flag["link_spinning_friction"]
-            and body.link_spinning_friction is not None
             or body.attr_array_dirty_flag["link_spinning_friction"]
         ):
             kwargs["spinningFriction"] = body.get_attr_array("link_spinning_friction", 0)
         if (
             not dirty_only
             and not body.attr_array_default_flag["link_rolling_friction"]
-            and body.link_rolling_friction is not None
             or body.attr_array_dirty_flag["link_rolling_friction"]
         ):
             kwargs["rollingFriction"] = body.get_attr_array("link_rolling_friction", 0)
         if (
             not dirty_only
             and not body.attr_array_default_flag["link_restitution"]
-            and body.link_restitution is not None
             or body.attr_array_dirty_flag["link_restitution"]
         ):
             kwargs["restitution"] = body.get_attr_array("link_restitution", 0)
@@ -575,14 +588,12 @@ class Bullet(Simulator):
         if (
             not dirty_only
             and not body.attr_array_default_flag["dof_lower_limit"]
-            and body.dof_lower_limit is not None
             or body.attr_array_dirty_flag["dof_lower_limit"]
         ):
             kwargs["jointLowerLimit"] = body.get_attr_array("dof_lower_limit", 0)
         if (
             not dirty_only
             and not body.attr_array_default_flag["dof_upper_limit"]
-            and body.dof_upper_limit is not None
             or body.attr_array_dirty_flag["dof_upper_limit"]
         ):
             kwargs["jointUpperLimit"] = body.get_attr_array("dof_upper_limit", 0)
