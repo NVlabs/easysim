@@ -231,6 +231,7 @@ class IsaacGym(Simulator):
             asset_options = gymapi.AssetOptions()
             for attr in (
                 "flip_visual_attachments",
+                "collapse_fixed_joints",
                 "disable_gravity",
                 "override_com",
                 "override_inertia",

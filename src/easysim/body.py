@@ -1074,6 +1074,7 @@ class IsaacGym(AttrsArrayTensor):
         self,
         body,
         flip_visual_attachments=None,
+        collapse_fixed_joints=None,
         disable_gravity=None,
         override_com=None,
         override_inertia=None,
@@ -1088,6 +1089,7 @@ class IsaacGym(AttrsArrayTensor):
         self._body = body
 
         self.flip_visual_attachments = flip_visual_attachments
+        self.collapse_fixed_joints = collapse_fixed_joints
         self.disable_gravity = disable_gravity
         self.override_com = override_com
         self.override_inertia = override_inertia
@@ -1111,6 +1113,16 @@ class IsaacGym(AttrsArrayTensor):
     def flip_visual_attachments(self, value):
         """ """
         self._flip_visual_attachments = value
+
+    @property
+    def collapse_fixed_joints(self):
+        """ """
+        return self._collapse_fixed_joints
+
+    @collapse_fixed_joints.setter
+    def collapse_fixed_joints(self, value):
+        """ """
+        self._collapse_fixed_joints = value
 
     @property
     def disable_gravity(self):
