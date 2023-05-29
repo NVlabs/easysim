@@ -434,6 +434,13 @@ class IsaacSim(Simulator):
                 time.sleep(time_sleep)
             self._last_frame_time = time.time()
 
+        if [body.name for body in self._scene.bodies] != [
+            body.name for body in self._scene_cache.bodies
+        ]:
+            raise ValueError(
+                "For Isaac Sim, the list of bodies cannot be altered after the first reset"
+            )
+
         for body in self._scene.bodies:
             if self._num_dofs[body.name] == 0:
                 for attr in (
