@@ -1088,12 +1088,6 @@ class Bullet(Simulator):
                                     f"for DoF ({i}) in POSITION_CONTROL and VELOCITY modes: "
                                     f"{body.name}"
                                 )
-                            self._p.setJointMotorControl2(
-                                self._body_ids[body.name],
-                                j,
-                                self._DOF_CONTROL_MODE_MAP[body.dof_control_mode[i].item()],
-                                **{k: v[i] for k, v in kwargs.items()},
-                            )
                         if body.dof_control_mode[i] == DoFControlMode.TORQUE_CONTROL:
                             if "force" in kwargs:
                                 del kwargs["force"]
@@ -1106,12 +1100,12 @@ class Bullet(Simulator):
                                     "For Bullet, 'dof_max_force' is required to be np.nan for DoF "
                                     f"({i}) in the TORQUE_CONTROL mode: {body.name}"
                                 )
-                            self._p.setJointMotorControl2(
-                                self._body_ids[body.name],
-                                j,
-                                self._DOF_CONTROL_MODE_MAP[body.dof_control_mode[i].item()],
-                                **{k: v[i] for k, v in kwargs.items()},
-                            )
+                        self._p.setJointMotorControl2(
+                            self._body_ids[body.name],
+                            j,
+                            self._DOF_CONTROL_MODE_MAP[body.dof_control_mode[i].item()],
+                            **{k: v[i] for k, v in kwargs.items()},
+                        )
 
         self._p.stepSimulation()
 
