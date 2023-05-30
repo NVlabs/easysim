@@ -282,7 +282,8 @@ class Bullet(Simulator):
             body.attr_array_default_flag["link_color"] = True
 
         if len(self._dof_indices[body.name]) > 0 and any(
-            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS + ("dof_max_velocity",)
+            getattr(body, x) is None
+            for x in self._ATTR_DOF_DYNAMICS + ("dof_max_force", "dof_max_velocity")
         ):
             joint_info = [
                 self._p.getJointInfo(self._body_ids[body.name], j)
@@ -294,6 +295,9 @@ class Bullet(Simulator):
             if body.dof_upper_limit is None:
                 body.dof_upper_limit = [[x[9] for x in joint_info]]
                 body.attr_array_default_flag["dof_upper_limit"] = True
+            if body.dof_max_force is None:
+                body.dof_max_force = [[x[10] for x in joint_info]]
+                body.attr_array_default_flag["dof_max_force"] = True
             if body.dof_max_velocity is None:
                 body.dof_max_velocity = [[x[11] for x in joint_info]]
                 body.attr_array_default_flag["dof_max_velocity"] = True
@@ -936,7 +940,7 @@ class Bullet(Simulator):
                 if body.dof_velocity_gain is not None:
                     kwargs["velocityGains"] = body.get_attr_array("dof_velocity_gain", 0)
                 if body.dof_control_mode.ndim == 0:
-                    if body.dof_max_force is not None:
+                    if not body.attr_array_default_flag["dof_max_force"]:
                         if body.dof_control_mode not in (
                             DoFControlMode.POSITION_CONTROL,
                             DoFControlMode.VELOCITY_CONTROL,
@@ -960,7 +964,7 @@ class Bullet(Simulator):
                         **kwargs,
                     )
                 if body.dof_control_mode.ndim == 1:
-                    if body.dof_max_force is not None:
+                    if not body.attr_array_default_flag["dof_max_force"]:
                         if (
                             DoFControlMode.POSITION_CONTROL not in body.dof_control_mode
                             and DoFControlMode.VELOCITY_CONTROL not in body.dof_control_mode
@@ -1028,7 +1032,7 @@ class Bullet(Simulator):
                 # For Bullet, 'dof_max_velocity' has no effect when not in the POSITION_CONROL mode.
                 kwargs["maxVelocity"] = body.get_attr_array("dof_max_velocity", 0)
                 if body.dof_control_mode.ndim == 0:
-                    if body.dof_max_force is not None:
+                    if not body.attr_array_default_flag["dof_max_force"]:
                         if body.dof_control_mode not in (
                             DoFControlMode.POSITION_CONTROL,
                             DoFControlMode.VELOCITY_CONTROL,
@@ -1054,7 +1058,7 @@ class Bullet(Simulator):
                         )
                 if body.dof_control_mode.ndim == 1:
                     if (
-                        body.dof_max_force is not None
+                        not body.attr_array_default_flag["dof_max_force"]
                         and DoFControlMode.POSITION_CONTROL not in body.dof_control_mode
                         and DoFControlMode.VELOCITY_CONTROL not in body.dof_control_mode
                     ):
@@ -1077,7 +1081,7 @@ class Bullet(Simulator):
                         ):
                             if "force" in kwargs:
                                 del kwargs["force"]
-                            if body.dof_max_force is not None:
+                            if not body.attr_array_default_flag["dof_max_force"]:
                                 kwargs["force"] = body.get_attr_array("dof_max_force", 0)
                             if body.dof_actuation_force is not None and not np.isnan(
                                 body.get_attr_tensor("dof_actuation_force", 0)[i]
@@ -1092,7 +1096,9 @@ class Bullet(Simulator):
                                 del kwargs["force"]
                             if body.dof_actuation_force is not None:
                                 kwargs["force"] = body.get_attr_tensor("dof_actuation_force", 0)
-                            if body.dof_max_force is not None and not np.isnan(
+                            if not body.attr_array_default_flag[
+                                "dof_max_force"
+                            ] is not None and not np.isnan(
                                 body.get_attr_array("dof_max_force", 0)[i]
                             ):
                                 raise ValueError(
