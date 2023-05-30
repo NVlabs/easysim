@@ -30,7 +30,6 @@ class Bullet(Simulator):
     _ATTR_DOF_DYNAMICS = (
         "dof_lower_limit",
         "dof_upper_limit",
-        "dof_max_velocity",
     )
     _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
     _ATTR_VIEW_MATRIX = ("position", "target", "up_vector", "orientation")
@@ -283,7 +282,7 @@ class Bullet(Simulator):
             body.attr_array_default_flag["link_color"] = True
 
         if len(self._dof_indices[body.name]) > 0 and any(
-            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS
+            getattr(body, x) is None for x in self._ATTR_DOF_DYNAMICS + ("dof_max_velocity",)
         ):
             joint_info = [
                 self._p.getJointInfo(self._body_ids[body.name], j)
