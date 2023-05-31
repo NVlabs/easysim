@@ -1176,13 +1176,14 @@ class IsaacGym(Simulator):
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
-            else:
-                self._reset_dof_state_buffer(body)
+                continue
 
-                if body.env_ids_reset_dof_state is not None:
-                    self._check_body_env_ids_reset(body, "env_ids_reset_dof_state", env_ids)
-                    actor_indices_dof.append(self._actor_indices[body.env_ids_reset_dof_state, b])
-                    body.env_ids_reset_dof_state = None
+            self._reset_dof_state_buffer(body)
+
+            if body.env_ids_reset_dof_state is not None:
+                self._check_body_env_ids_reset(body, "env_ids_reset_dof_state", env_ids)
+                actor_indices_dof.append(self._actor_indices[body.env_ids_reset_dof_state, b])
+                body.env_ids_reset_dof_state = None
 
         # Reset base state.
         if self._actor_root_state is not None:
@@ -1349,44 +1350,43 @@ class IsaacGym(Simulator):
                         f"'{body.name}'"
                     )
 
-            if self._asset_num_dofs[body.name] > 0:
-                for attr in ("dof_control_mode",):
-                    if body.attr_array_dirty_flag[attr]:
-                        raise ValueError(
-                            f"For Isaac Gym, '{attr}' cannot be changed after the first reset: "
-                            f"'{body.name}'"
-                        )
-                if any(
-                    body.attr_array_dirty_flag[x]
-                    for x in self._ATTR_DOF_PROPS
-                    if x not in ("dof_control_mode",)
-                ):
-                    mask = np.zeros(self._num_envs, dtype=bool)
-                    for attr in self._ATTR_DOF_PROPS:
-                        if body.attr_array_dirty_flag[attr]:
-                            if env_ids is not None and not np.all(
-                                np.isin(
-                                    np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu()
-                                )
-                            ):
-                                raise ValueError(
-                                    f"For Isaac Gym, to change '{attr}' for certain env also "
-                                    f"requires the env index to be in `env_ids`: '{body.name}'"
-                                )
-                            mask |= body.attr_array_dirty_mask[attr]
-                    env_ids_masked = np.nonzero(mask)[0]
-                    for idx in env_ids_masked:
-                        self._set_dof_props(body, idx)
-                    for attr in self._ATTR_DOF_PROPS:
-                        if body.attr_array_dirty_flag[attr]:
-                            body.attr_array_dirty_flag[attr] = False
-                            body.attr_array_dirty_mask[attr][:] = False
-            else:
+            if self._asset_num_dofs[body.name] == 0:
                 for attr in self._ATTR_DOF_PROPS:
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
+                continue
+
+            for attr in ("dof_control_mode",):
+                if body.attr_array_dirty_flag[attr]:
+                    raise ValueError(
+                        f"For Isaac Gym, '{attr}' cannot be changed after the first reset: "
+                        f"'{body.name}'"
+                    )
+            if any(
+                body.attr_array_dirty_flag[x]
+                for x in self._ATTR_DOF_PROPS
+                if x not in ("dof_control_mode",)
+            ):
+                mask = np.zeros(self._num_envs, dtype=bool)
+                for attr in self._ATTR_DOF_PROPS:
+                    if body.attr_array_dirty_flag[attr]:
+                        if env_ids is not None and not np.all(
+                            np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
+                        ):
+                            raise ValueError(
+                                f"For Isaac Gym, to change '{attr}' for certain env also requires "
+                                f"the env index to be in `env_ids`: '{body.name}'"
+                            )
+                        mask |= body.attr_array_dirty_mask[attr]
+                env_ids_masked = np.nonzero(mask)[0]
+                for idx in env_ids_masked:
+                    self._set_dof_props(body, idx)
+                for attr in self._ATTR_DOF_PROPS:
+                    if body.attr_array_dirty_flag[attr]:
+                        body.attr_array_dirty_flag[attr] = False
+                        body.attr_array_dirty_mask[attr][:] = False
 
     def _clear_state(self):
         """ """

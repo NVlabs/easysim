@@ -403,68 +403,68 @@ class Bullet(Simulator):
             for attr in ("dof_lower_limit", "dof_upper_limit", "dof_control_mode"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
-        else:
-            if any(not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS):
-                self._set_dof_dynamics(body)
-            for attr in self._ATTR_DOF_DYNAMICS:
-                if body.attr_array_dirty_flag[attr]:
-                    body.attr_array_dirty_flag[attr] = False
+            return
 
-            if body.dof_control_mode is None:
-                raise ValueError(
-                    "For Bullet, 'dof_control_mode' is required for body with DoF > 0: "
-                    f"'{body.name}'"
-                )
-            if (
-                body.dof_control_mode.ndim == 0
-                and body.dof_control_mode
+        if any(not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS):
+            self._set_dof_dynamics(body)
+        for attr in self._ATTR_DOF_DYNAMICS:
+            if body.attr_array_dirty_flag[attr]:
+                body.attr_array_dirty_flag[attr] = False
+
+        if body.dof_control_mode is None:
+            raise ValueError(
+                f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
+            )
+        if (
+            body.dof_control_mode.ndim == 0
+            and body.dof_control_mode
+            not in (
+                DoFControlMode.POSITION_CONTROL,
+                DoFControlMode.VELOCITY_CONTROL,
+                DoFControlMode.TORQUE_CONTROL,
+            )
+            or body.dof_control_mode.ndim == 1
+            and any(
+                y
                 not in (
                     DoFControlMode.POSITION_CONTROL,
                     DoFControlMode.VELOCITY_CONTROL,
                     DoFControlMode.TORQUE_CONTROL,
                 )
-                or body.dof_control_mode.ndim == 1
-                and any(
-                    y
-                    not in (
-                        DoFControlMode.POSITION_CONTROL,
-                        DoFControlMode.VELOCITY_CONTROL,
-                        DoFControlMode.TORQUE_CONTROL,
-                    )
-                    for y in body.dof_control_mode
-                )
-            ):
-                raise ValueError(
-                    "For Bullet, 'dof_control_mode' only supports POSITION_CONTROL, "
-                    f"VELOCITY_CONTROL, and TORQUE_CONTROL: '{body.name}'"
-                )
-            if (
-                body.dof_control_mode.ndim == 0
-                and body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
-            ):
-                self._p.setJointMotorControlArray(
-                    self._body_ids[body.name],
-                    self._dof_indices[body.name],
-                    pybullet.VELOCITY_CONTROL,
-                    forces=[0] * len(self._dof_indices[body.name]),
-                )
-            if (
-                body.dof_control_mode.ndim == 1
-                and DoFControlMode.TORQUE_CONTROL in body.dof_control_mode
-            ):
-                self._p.setJointMotorControlArray(
-                    self._body_ids[body.name],
+                for y in body.dof_control_mode
+            )
+        ):
+            raise ValueError(
+                "For Bullet, 'dof_control_mode' only supports POSITION_CONTROL, VELOCITY_CONTROL, "
+                f"and TORQUE_CONTROL: '{body.name}'"
+            )
+        if (
+            body.dof_control_mode.ndim == 0
+            and body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+        ):
+            self._p.setJointMotorControlArray(
+                self._body_ids[body.name],
+                self._dof_indices[body.name],
+                pybullet.VELOCITY_CONTROL,
+                forces=[0] * len(self._dof_indices[body.name]),
+            )
+        if (
+            body.dof_control_mode.ndim == 1
+            and DoFControlMode.TORQUE_CONTROL in body.dof_control_mode
+        ):
+            self._p.setJointMotorControlArray(
+                self._body_ids[body.name],
+                self._dof_indices[body.name][
+                    body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
+                ],
+                pybullet.VELOCITY_CONTROL,
+                forces=[0]
+                * len(
                     self._dof_indices[body.name][
                         body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
-                    ],
-                    pybullet.VELOCITY_CONTROL,
-                    forces=[0]
-                    * len(
-                        self._dof_indices[body.name][
-                            body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
-                        ]
-                    ),
-                )
+                    ]
+                ),
+            )
 
     def _set_link_collision_filter(self, body):
         """ """
