@@ -1350,15 +1350,16 @@ class IsaacGym(Simulator):
                     )
 
             if self._asset_num_dofs[body.name] > 0:
-                if body.attr_array_dirty_flag["dof_control_mode"]:
-                    raise ValueError(
-                        "For Isaac Gym, 'dof_control_mode' cannot be changed after the first "
-                        f"reset: '{body.name}'"
-                    )
+                for attr in ("dof_control_mode",):
+                    if body.attr_array_dirty_flag[attr]:
+                        raise ValueError(
+                            f"For Isaac Gym, '{attr}' cannot be changed after the first reset: "
+                            f"'{body.name}'"
+                        )
                 if any(
                     body.attr_array_dirty_flag[x]
                     for x in self._ATTR_DOF_PROPS
-                    if x != "dof_control_mode"
+                    if x not in ("dof_control_mode",)
                 ):
                     mask = np.zeros(self._num_envs, dtype=bool)
                     for attr in self._ATTR_DOF_PROPS:

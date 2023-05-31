@@ -870,10 +870,11 @@ class Bullet(Simulator):
                     self._reset_base_velocity(body)
                 body.env_ids_reset_base_state = None
 
-            if body.attr_array_dirty_flag["scale"]:
-                raise ValueError(
-                    f"For Bullet, 'scale' can only be changed before each reset: '{body.name}'"
-                )
+            for attr in ("scale",):
+                if body.attr_array_dirty_flag[attr]:
+                    raise ValueError(
+                        f"For Bullet, '{attr}' cannot be changed after each reset: '{body.name}'"
+                    )
             if body.attr_array_dirty_flag["link_collision_filter"]:
                 self._set_link_collision_filter(body)
                 body.attr_array_dirty_flag["link_collision_filter"] = False
@@ -921,11 +922,11 @@ class Bullet(Simulator):
                     if body.attr_array_dirty_flag[attr]:
                         body.attr_array_dirty_flag[attr] = False
 
-            if body.attr_array_dirty_flag["dof_control_mode"]:
-                raise ValueError(
-                    "For Bullet, 'dof_control_mode' cannot be changed after each reset: "
-                    f"'{body.name}'"
-                )
+            for attr in ("dof_control_mode",):
+                if body.attr_array_dirty_flag[attr]:
+                    raise ValueError(
+                        f"For Bullet, '{attr}' cannot be changed after each reset: '{body.name}'"
+                    )
             # The redundant if-else block below is an artifact due to `setJointMotorControlArray()`
             # not supporting `maxVelocity`. `setJointMotorControlArray()` is still preferred when
             # `maxVelocity` is not needed due to better speed performance.
