@@ -1383,7 +1383,7 @@ class IsaacGym(Simulator):
                             body.attr_array_dirty_mask[attr][:] = False
             else:
                 for attr in self._ATTR_DOF_PROPS:
-                    if body.attr_array_dirty_flag[attr]:
+                    if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
