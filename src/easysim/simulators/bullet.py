@@ -114,7 +114,8 @@ class Bullet(Simulator):
 
             for body in self._scene.bodies:
                 self._reset_body_state(body)
-                self._set_body_control_and_props(body)
+                self._set_body_props_and_control(body)
+                body.lock_attr_array()
                 self._set_body_callback(body)
 
             self._projection_matrix = {}
@@ -123,6 +124,7 @@ class Bullet(Simulator):
 
             for camera in self._scene.cameras:
                 self._load_camera(camera)
+                camera.lock_attr_array()
                 self._set_camera_callback(camera)
 
             if not self._connected:
@@ -373,22 +375,46 @@ class Bullet(Simulator):
                     self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
                 )
 
-    def _set_body_control_and_props(self, body):
+    def _set_body_props_and_control(self, body):
         """ """
         if body.env_ids_load is not None and len(body.env_ids_load) == 0:
-            body.lock_attr_array()
             return
 
         for attr in ("link_segmentation_id", "dof_has_limits", "dof_armature"):
             if getattr(body, attr) is not None:
                 raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
+        if body.link_collision_filter is not None:
+            self._set_link_collision_filter(body)
+        if any(
+            not body.attr_array_default_flag[x]
+            if x not in ("link_linear_damping", "link_angular_damping")
+            else getattr(body, x) is not None
+            for x in self._ATTR_LINK_DYNAMICS
+        ):
+            self._set_link_dynamics(body)
+        if not body.attr_array_default_flag["link_color"]:
+            self._set_link_color(body)
+        for attr in ("link_collision_filter",) + self._ATTR_LINK_DYNAMICS + ("link_color",):
+            if body.attr_array_dirty_flag[attr]:
+                body.attr_array_dirty_flag[attr] = False
+
         if len(self._dof_indices[body.name]) == 0:
             for attr in ("dof_lower_limit", "dof_upper_limit", "dof_control_mode"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
+        else:
+            if any(not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS):
+                self._set_dof_dynamics(body)
+            for attr in self._ATTR_DOF_DYNAMICS:
+                if body.attr_array_dirty_flag[attr]:
+                    body.attr_array_dirty_flag[attr] = False
 
-        if body.dof_control_mode is not None:
+            if body.dof_control_mode is None:
+                raise ValueError(
+                    "For Bullet, 'dof_control_mode' is required for body with DoF > 0: "
+                    f"'{body.name}'"
+                )
             if (
                 body.dof_control_mode.ndim == 0
                 and body.dof_control_mode
@@ -412,7 +438,6 @@ class Bullet(Simulator):
                     "For Bullet, 'dof_control_mode' only supports POSITION_CONTROL, "
                     f"VELOCITY_CONTROL, and TORQUE_CONTROL: '{body.name}'"
                 )
-
             if (
                 body.dof_control_mode.ndim == 0
                 and body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
@@ -440,39 +465,6 @@ class Bullet(Simulator):
                         ]
                     ),
                 )
-        elif len(self._dof_indices[body.name]) > 0:
-            raise ValueError(
-                f"For Bullet, 'dof_control_mode' is required for body with DoF > 0: '{body.name}'"
-            )
-
-        if body.link_collision_filter is not None:
-            self._set_link_collision_filter(body)
-
-        if any(
-            not body.attr_array_default_flag[x]
-            if x not in ("link_linear_damping", "link_angular_damping")
-            else getattr(body, x) is not None
-            for x in self._ATTR_LINK_DYNAMICS
-        ):
-            self._set_link_dynamics(body)
-
-        if not body.attr_array_default_flag["link_color"]:
-            self._set_link_color(body)
-
-        if len(self._dof_indices[body.name]) > 0 and any(
-            not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS
-        ):
-            self._set_dof_dynamics(body)
-
-        body.lock_attr_array()
-
-        for attr in (
-            ("link_color", "link_collision_filter")
-            + self._ATTR_LINK_DYNAMICS
-            + self._ATTR_DOF_DYNAMICS
-        ):
-            if body.attr_array_dirty_flag[attr]:
-                body.attr_array_dirty_flag[attr] = False
 
     def _set_link_collision_filter(self, body):
         """ """
@@ -645,8 +637,6 @@ class Bullet(Simulator):
 
         self._image_cache[camera.name] = {}
         self._clear_image_cache(camera)
-
-        camera.lock_attr_array()
 
     def _set_projection_matrix(self, camera):
         """ """
