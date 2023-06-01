@@ -285,7 +285,7 @@ class Bullet(Simulator):
 
         if len(self._dof_indices[body.name]) > 0 and any(
             getattr(body, x) is None
-            for x in self._ATTR_DOF_DYNAMICS + ("dof_max_force", "dof_max_velocity")
+            for x in self._ATTR_DOF_DYNAMICS + ("dof_max_force", "dof_max_velocity", "dof_friction")
         ):
             joint_info = [
                 self._p.getJointInfo(self._body_ids[body.name], j)
@@ -303,6 +303,9 @@ class Bullet(Simulator):
             if body.dof_max_velocity is None:
                 body.dof_max_velocity = [[x[11] for x in joint_info]]
                 body.attr_array_default_flag["dof_max_velocity"] = True
+            if body.dof_friction is None:
+                body.dof_friction = [[x[7] for x in joint_info]]
+                body.attr_array_default_flag["dof_friction"] = True
 
     def _cache_body(self, body):
         """ """
@@ -400,10 +403,16 @@ class Bullet(Simulator):
                 body.attr_array_dirty_flag[attr] = False
 
         if len(self._dof_indices[body.name]) == 0:
-            for attr in ("dof_lower_limit", "dof_upper_limit", "dof_control_mode"):
+            for attr in ("dof_lower_limit", "dof_upper_limit", "dof_control_mode", "dof_friction"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
             return
+
+        for attr in ("dof_friction",):
+            if not body.attr_array_default_flag[attr]:
+                raise ValueError(
+                    f"For Bullet, '{attr}' cannot be changed after body is loaded: '{body.name}'"
+                )
 
         if any(not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS):
             self._set_dof_dynamics(body)
@@ -886,6 +895,7 @@ class Bullet(Simulator):
                     "dof_max_velocity",
                     "dof_position_gain",
                     "dof_velocity_gain",
+                    "dof_friction",
                     "dof_target_position",
                     "dof_target_velocity",
                     "dof_actuation_force",
@@ -906,17 +916,24 @@ class Bullet(Simulator):
                 self._reset_dof_state(body)
                 body.env_ids_reset_dof_state = None
 
+            for attr in ("dof_friction",):
+                if not body.attr_array_default_flag[attr]:
+                    raise ValueError(
+                        f"For Bullet, '{attr}' cannot be changed after body is loaded: "
+                        f"'{body.name}'"
+                    )
+            for attr in ("dof_control_mode",):
+                if body.attr_array_dirty_flag[attr]:
+                    raise ValueError(
+                        f"For Bullet, '{attr}' cannot be changed after each reset: '{body.name}'"
+                    )
+
             if any(body.attr_array_dirty_flag[x] for x in self._ATTR_DOF_DYNAMICS):
                 self._set_dof_dynamics(body, dirty_only=True)
                 for attr in self._ATTR_DOF_DYNAMICS:
                     if body.attr_array_dirty_flag[attr]:
                         body.attr_array_dirty_flag[attr] = False
 
-            for attr in ("dof_control_mode",):
-                if body.attr_array_dirty_flag[attr]:
-                    raise ValueError(
-                        f"For Bullet, '{attr}' cannot be changed after each reset: '{body.name}'"
-                    )
             # The redundant if-else block below is an artifact due to `setJointMotorControlArray()`
             # not supporting `maxVelocity`. `setJointMotorControlArray()` is still preferred when
             # `maxVelocity` is not needed due to better speed performance.

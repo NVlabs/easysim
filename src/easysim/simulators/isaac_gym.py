@@ -43,6 +43,7 @@ class IsaacGym(Simulator):
         "dof_max_velocity",
         "dof_position_gain",
         "dof_velocity_gain",
+        "dof_friction",
         "dof_armature",
     )
     _ATTR_PROJECTION_MATRIX = ("width", "height", "vertical_fov", "near", "far")
@@ -555,6 +556,9 @@ class IsaacGym(Simulator):
                 if body.dof_velocity_gain is None:
                     body.dof_velocity_gain = np.tile(dof_props["damping"], (self._num_envs, 1))
                     body.attr_array_default_flag["dof_velocity_gain"] = True
+                if body.dof_friction is None:
+                    body.dof_friction = np.tile(dof_props["friction"], (self._num_envs, 1))
+                    body.attr_array_default_flag["dof_friction"] = True
                 if body.dof_armature is None:
                     body.dof_armature = np.tile(dof_props["armature"], (self._num_envs, 1))
                     body.attr_array_default_flag["dof_armature"] = True
@@ -752,6 +756,12 @@ class IsaacGym(Simulator):
             or body.attr_array_dirty_flag["dof_velocity_gain"]
         ):
             dof_props["damping"] = body.get_attr_array("dof_velocity_gain", idx)
+        if (
+            not body.attr_array_locked["dof_friction"]
+            and not body.attr_array_default_flag["dof_friction"]
+            or body.attr_array_dirty_flag["dof_friction"]
+        ):
+            dof_props["friction"] = body.get_attr_array("dof_friction", idx)
         if (
             not body.attr_array_locked["dof_armature"]
             and not body.attr_array_default_flag["dof_armature"]

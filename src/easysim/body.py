@@ -30,6 +30,7 @@ class Body(AttrsArrayTensor):
         "dof_max_velocity": 1,
         "dof_position_gain": 1,
         "dof_velocity_gain": 1,
+        "dof_friction": 1,
         "dof_armature": 1,
     }
     _ATTR_TENSOR_NDIM = {
@@ -75,6 +76,7 @@ class Body(AttrsArrayTensor):
         dof_max_velocity=None,
         dof_position_gain=None,
         dof_velocity_gain=None,
+        dof_friction=None,
         dof_armature=None,
         dof_target_position=None,
         dof_target_velocity=None,
@@ -123,6 +125,7 @@ class Body(AttrsArrayTensor):
         self.dof_max_velocity = dof_max_velocity
         self.dof_position_gain = dof_position_gain
         self.dof_velocity_gain = dof_velocity_gain
+        self.dof_friction = dof_friction
         self.dof_armature = dof_armature
 
         self.dof_target_position = dof_target_position
@@ -744,6 +747,31 @@ class Body(AttrsArrayTensor):
                     f"{self._ATTR_ARRAY_NDIM['dof_velocity_gain'] + 1}"
                 )
         self._dof_velocity_gain = value
+
+    @property
+    def dof_friction(self):
+        """ """
+        return self._dof_friction
+
+    @dof_friction.setter
+    def dof_friction(self, value):
+        """ """
+        assert not self._attr_array_locked["dof_friction"], (
+            "'dof_friction' cannot be directly changed after simulation starts. Use "
+            "'update_attr_array()'."
+        )
+        if value is not None:
+            value = np.asanyarray(value, dtype=np.float32)
+            if value.ndim not in (
+                self._ATTR_ARRAY_NDIM["dof_friction"],
+                self._ATTR_ARRAY_NDIM["dof_friction"] + 1,
+            ):
+                raise ValueError(
+                    "'dof_friction' must have a number of dimensions of "
+                    f"{self._ATTR_ARRAY_NDIM['dof_friction']} or "
+                    f"{self._ATTR_ARRAY_NDIM['dof_friction'] + 1}"
+                )
+        self._dof_friction = value
 
     @property
     def dof_armature(self):
