@@ -66,90 +66,101 @@ class Bullet(Simulator):
 
     def reset(self, env_ids, callback_post_load):
         """ """
-        if not self._connected:
-            if self._cfg.RENDER:
-                self._p = bullet_client.BulletClient(connection_mode=pybullet.GUI)
-            else:
-                self._p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
-            self._p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        if env_ids is not None and env_ids.tolist() not in ([], [0]):
+            raise ValueError("For Bullet, 'env_ids' must be either None, [] or [0]")
 
-            self._plugins = {}
-
-            if self._cfg.BULLET.USE_EGL:
+        if env_ids is None or env_ids.tolist() == [0]:
+            if not self._connected:
                 if self._cfg.RENDER:
-                    raise ValueError("USE_EGL can only be True when RENDER is set to False")
-                egl = pkgutil.get_loader("eglRenderer")
-                self._plugins["egl_renderer"] = self._p.loadPlugin(
-                    egl.get_filename(), "_eglRendererPlugin"
-                )
+                    self._p = bullet_client.BulletClient(connection_mode=pybullet.GUI)
+                else:
+                    self._p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
+                self._p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-        with self._disable_cov_rendering():
-            self._p.resetSimulation()
-            self._p.setGravity(*self._cfg.GRAVITY)
-            if self._cfg.USE_DEFAULT_STEP_PARAMS:
-                sim_params = self._p.getPhysicsEngineParameters()
-                self._cfg.TIME_STEP = sim_params["fixedTimeStep"]
-                self._cfg.SUBSTEPS = max(sim_params["numSubSteps"], 1)
-            else:
-                self._p.setPhysicsEngineParameter(
-                    fixedTimeStep=self._cfg.TIME_STEP, numSubSteps=self._cfg.SUBSTEPS
-                )
-            self._p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
+                self._plugins = {}
 
-            if self._cfg.LOAD_GROUND_PLANE:
-                self._body_id_ground_plane = self._load_ground_plane()
+                if self._cfg.BULLET.USE_EGL:
+                    if self._cfg.RENDER:
+                        raise ValueError("USE_EGL can only be True when RENDER is set to False")
+                    egl = pkgutil.get_loader("eglRenderer")
+                    self._plugins["egl_renderer"] = self._p.loadPlugin(
+                        egl.get_filename(), "_eglRendererPlugin"
+                    )
 
-            self._scene_cache = type(self._scene)()
+            with self._disable_cov_rendering():
+                self._p.resetSimulation()
+                self._p.setGravity(*self._cfg.GRAVITY)
+                if self._cfg.USE_DEFAULT_STEP_PARAMS:
+                    sim_params = self._p.getPhysicsEngineParameters()
+                    self._cfg.TIME_STEP = sim_params["fixedTimeStep"]
+                    self._cfg.SUBSTEPS = max(sim_params["numSubSteps"], 1)
+                else:
+                    self._p.setPhysicsEngineParameter(
+                        fixedTimeStep=self._cfg.TIME_STEP, numSubSteps=self._cfg.SUBSTEPS
+                    )
+                self._p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
 
-            self._body_ids = {}
-            self._dof_indices = {}
-            self._num_links = {}
+                if self._cfg.LOAD_GROUND_PLANE:
+                    self._body_id_ground_plane = self._load_ground_plane()
 
-            for body in self._scene.bodies:
-                self._load_body(body)
-                self._load_body_props(body)
-                self._cache_body(body)
+                self._scene_cache = type(self._scene)()
 
-            callback_post_load()
+                self._body_ids = {}
+                self._dof_indices = {}
+                self._num_links = {}
 
-            for body in self._scene.bodies:
-                self._reset_body_state(body)
-                self._set_body_props_and_control(body)
-                body.lock_attr_array()
-                self._set_body_callback(body)
+                for body in self._scene.bodies:
+                    self._load_body(body)
+                    self._load_body_props(body)
+                    self._cache_body(body)
 
-            self._projection_matrix = {}
-            self._view_matrix = {}
-            self._image_cache = {}
+                callback_post_load()
 
-            for camera in self._scene.cameras:
-                self._load_camera(camera)
-                camera.lock_attr_array()
-                self._set_camera_callback(camera)
+                for body in self._scene.bodies:
+                    self._reset_body_state(body)
+                    self._set_body_props_and_control(body)
+                    body.lock_attr_array()
+                    self._set_body_callback(body)
+
+                self._projection_matrix = {}
+                self._view_matrix = {}
+                self._image_cache = {}
+
+                for camera in self._scene.cameras:
+                    self._load_camera(camera)
+                    camera.lock_attr_array()
+                    self._set_camera_callback(camera)
+
+                if not self._connected:
+                    self._set_scene_callback()
+
+                if not self._connected and self._cfg.RENDER:
+                    if bool(self._cfg.VIEWER.INIT_CAMERA_POSITION == (None, None, None)) != bool(
+                        self._cfg.VIEWER.INIT_CAMERA_TARGET == (None, None, None)
+                    ):
+                        raise ValueError(
+                            "INIT_CAMERA_POSITION and INIT_CAMERA_TARGET need to be set together "
+                            f"in order to take effect: {self._cfg.VIEWER.INIT_CAMERA_POSITION}, "
+                            f"{self._cfg.VIEWER.INIT_CAMERA_TARGET}"
+                        )
+                    elif self._cfg.VIEWER.INIT_CAMERA_POSITION != (
+                        None,
+                        None,
+                        None,
+                    ) and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None):
+                        self._set_viewer_camera_pose(
+                            self._cfg.VIEWER.INIT_CAMERA_POSITION,
+                            self._cfg.VIEWER.INIT_CAMERA_TARGET,
+                        )
 
             if not self._connected:
-                self._set_scene_callback()
+                self._connected = True
+        else:
+            if not self._connected:
+                raise ValueError("For Bullet, 'env_ids' cannot be set to [] in the first reset")
 
-            if not self._connected and self._cfg.RENDER:
-                if bool(self._cfg.VIEWER.INIT_CAMERA_POSITION == (None, None, None)) != bool(
-                    self._cfg.VIEWER.INIT_CAMERA_TARGET == (None, None, None)
-                ):
-                    raise ValueError(
-                        "INIT_CAMERA_POSITION and INIT_CAMERA_TARGET need to be set together in "
-                        f"order to take effect: {self._cfg.VIEWER.INIT_CAMERA_POSITION}, "
-                        f"{self._cfg.VIEWER.INIT_CAMERA_TARGET}"
-                    )
-                elif self._cfg.VIEWER.INIT_CAMERA_POSITION != (
-                    None,
-                    None,
-                    None,
-                ) and self._cfg.VIEWER.INIT_CAMERA_TARGET != (None, None, None):
-                    self._set_viewer_camera_pose(
-                        self._cfg.VIEWER.INIT_CAMERA_POSITION, self._cfg.VIEWER.INIT_CAMERA_TARGET
-                    )
-
-        if not self._connected:
-            self._connected = True
+            for body in self._scene.bodies:
+                self._check_and_reset_body_state(body)
 
         self._clear_state()
         self._clear_image()
@@ -315,68 +326,64 @@ class Bullet(Simulator):
 
     def _reset_body_state(self, body):
         """ """
-        # Reset base state.
-        if body.initial_base_position is not None:
-            self._reset_base_position(body)
-        if body.initial_base_velocity is not None:
-            self._reset_base_velocity(body)
+        self._reset_base_state(body)
 
-        # Reset DoF state.
         if len(self._dof_indices[body.name]) == 0:
             for attr in ("initial_dof_position", "initial_dof_velocity"):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
+            return
+
+        self._reset_dof_state(body)
+
+    def _reset_base_state(self, body):
+        """ """
+        if body.initial_base_position is not None:
+            if body.initial_base_position.ndim == 1:
+                self._p.resetBasePositionAndOrientation(
+                    self._body_ids[body.name],
+                    body.initial_base_position[:3],
+                    body.initial_base_position[3:],
+                )
+            if body.initial_base_position.ndim == 2:
+                self._p.resetBasePositionAndOrientation(
+                    self._body_ids[body.name],
+                    body.initial_base_position[0, :3],
+                    body.initial_base_position[0, 3:],
+                )
+        if body.initial_base_velocity is not None:
+            kwargs = {}
+            if body.initial_base_velocity.ndim == 1:
+                kwargs["linearVelocity"] = body.initial_base_velocity[:3]
+                kwargs["angularVelocity"] = body.initial_base_velocity[3:]
+            if body.initial_base_velocity.ndim == 2:
+                kwargs["linearVelocity"] = body.initial_base_velocity[0, :3]
+                kwargs["angularVelocity"] = body.initial_base_velocity[0, 3:]
+            self._p.resetBaseVelocity(self._body_ids[body.name], **kwargs)
+
+    def _reset_dof_state(self, body):
+        """ """
         if body.initial_dof_position is not None:
-            self._reset_dof_state(body)
+            for i, j in enumerate(self._dof_indices[body.name]):
+                kwargs = {}
+                if body.initial_dof_velocity is not None:
+                    if body.initial_dof_velocity.ndim == 1:
+                        kwargs["targetVelocity"] = body.initial_dof_velocity[i]
+                    if body.initial_dof_velocity.ndim == 2:
+                        kwargs["targetVelocity"] = body.initial_dof_velocity[0, i]
+                if body.initial_dof_position.ndim == 1:
+                    self._p.resetJointState(
+                        self._body_ids[body.name], j, body.initial_dof_position[i], **kwargs
+                    )
+                if body.initial_dof_position.ndim == 2:
+                    self._p.resetJointState(
+                        self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
+                    )
         elif body.initial_dof_velocity is not None:
             raise ValueError(
                 "For Bullet, cannot reset 'initial_dof_velocity' without resetting "
                 f"'initial_dof_position': '{body.name}'"
             )
-
-    def _reset_base_position(self, body):
-        """ """
-        if body.initial_base_position.ndim == 1:
-            self._p.resetBasePositionAndOrientation(
-                self._body_ids[body.name],
-                body.initial_base_position[:3],
-                body.initial_base_position[3:],
-            )
-        if body.initial_base_position.ndim == 2:
-            self._p.resetBasePositionAndOrientation(
-                self._body_ids[body.name],
-                body.initial_base_position[0, :3],
-                body.initial_base_position[0, 3:],
-            )
-
-    def _reset_base_velocity(self, body):
-        """ """
-        kwargs = {}
-        if body.initial_base_velocity.ndim == 1:
-            kwargs["linearVelocity"] = body.initial_base_velocity[:3]
-            kwargs["angularVelocity"] = body.initial_base_velocity[3:]
-        if body.initial_base_velocity.ndim == 2:
-            kwargs["linearVelocity"] = body.initial_base_velocity[0, :3]
-            kwargs["angularVelocity"] = body.initial_base_velocity[0, 3:]
-        self._p.resetBaseVelocity(self._body_ids[body.name], **kwargs)
-
-    def _reset_dof_state(self, body):
-        """ """
-        for i, j in enumerate(self._dof_indices[body.name]):
-            kwargs = {}
-            if body.initial_dof_velocity is not None:
-                if body.initial_dof_velocity.ndim == 1:
-                    kwargs["targetVelocity"] = body.initial_dof_velocity[i]
-                if body.initial_dof_velocity.ndim == 2:
-                    kwargs["targetVelocity"] = body.initial_dof_velocity[0, i]
-            if body.initial_dof_position.ndim == 1:
-                self._p.resetJointState(
-                    self._body_ids[body.name], j, body.initial_dof_position[i], **kwargs
-                )
-            if body.initial_dof_position.ndim == 2:
-                self._p.resetJointState(
-                    self._body_ids[body.name], j, body.initial_dof_position[0, i], **kwargs
-                )
 
     def _set_body_props_and_control(self, body):
         """ """
@@ -791,6 +798,52 @@ class Bullet(Simulator):
 
         self._p.resetDebugVisualizerCamera(dist, yaw, pitch, target)
 
+    def _check_and_reset_body_state(self, body):
+        """ """
+        if body.env_ids_load is not None and len(body.env_ids_load) == 0:
+            for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
+                if getattr(body, attr) is not None:
+                    raise ValueError(
+                        f"For Bullet, '{attr}' should be None if 'env_ids_load' is set to "
+                        f"[]: '{body.name}'"
+                    )
+            return
+
+        if body.env_ids_reset_base_state is not None:
+            if body.env_ids_reset_base_state.tolist() != [0]:
+                raise ValueError(
+                    "For Bullet, 'env_ids_reset_base_state' must be either None or [0]: "
+                    f"'{body.name}'"
+                )
+            if body.initial_base_position is None and body.initial_base_velocity is None:
+                raise ValueError(
+                    "'initial_base_position' and 'initial_base_velocity' cannot be both "
+                    f"None when 'env_ids_reset_base_state' is used: {body.name}"
+                )
+            self._reset_base_state(body)
+            body.env_ids_reset_base_state = None
+
+        if len(self._dof_indices[body.name]) == 0:
+            for attr in (
+                "initial_dof_position",
+                "initial_dof_velocity",
+                "env_ids_reset_dof_state",
+            ):
+                if getattr(body, attr) is not None:
+                    raise ValueError(
+                        f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
+                    )
+            return
+
+        if body.env_ids_reset_dof_state is not None:
+            if body.env_ids_reset_dof_state.tolist() != [0]:
+                raise ValueError(
+                    "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
+                    f"'{body.name}'"
+                )
+            self._reset_dof_state(body)
+            body.env_ids_reset_dof_state = None
+
     def _clear_state(self):
         """ """
         for body in self._scene.bodies:
@@ -842,32 +895,6 @@ class Bullet(Simulator):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
-            if body.env_ids_load is not None and len(body.env_ids_load) == 0:
-                for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
-                    if getattr(body, attr) is not None:
-                        raise ValueError(
-                            f"For Bullet, '{attr}' should be None if 'env_ids_load' is set to []: "
-                            f"'{body.name}'"
-                        )
-                continue
-
-            if body.env_ids_reset_base_state is not None:
-                if body.env_ids_reset_base_state.tolist() != [0]:
-                    raise ValueError(
-                        "For Bullet, 'env_ids_reset_base_state' must be either None or [0]: "
-                        f"'{body.name}'"
-                    )
-                if body.initial_base_position is None and body.initial_base_velocity is None:
-                    raise ValueError(
-                        "'initial_base_position' and 'initial_base_velocity' cannot be both None "
-                        f"when 'env_ids_reset_base_state' is used: {body.name}"
-                    )
-                if body.initial_base_position is not None:
-                    self._reset_base_position(body)
-                if body.initial_base_velocity is not None:
-                    self._reset_base_velocity(body)
-                body.env_ids_reset_base_state = None
-
             for attr in ("scale",):
                 if body.attr_array_dirty_flag[attr]:
                     raise ValueError(
@@ -898,22 +925,12 @@ class Bullet(Simulator):
                     "dof_target_position",
                     "dof_target_velocity",
                     "dof_actuation_force",
-                    "env_ids_reset_dof_state",
                 ):
                     if getattr(body, attr) is not None:
                         raise ValueError(
                             f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
                         )
                 continue
-
-            if body.env_ids_reset_dof_state is not None:
-                if body.env_ids_reset_dof_state.tolist() != [0]:
-                    raise ValueError(
-                        "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
-                        f"'{body.name}'"
-                    )
-                self._reset_dof_state(body)
-                body.env_ids_reset_dof_state = None
 
             for attr in ("dof_friction",):
                 if not body.attr_array_default_flag[attr]:
