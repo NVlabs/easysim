@@ -175,9 +175,9 @@ class Bullet(Simulator):
     def _load_body(self, body):
         """ """
         if body.env_ids_load is not None:
-            if np.array_equal(body.env_ids_load.cpu(), []):
+            if body.env_ids_load.tolist() == []:
                 return
-            elif not np.array_equal(body.env_ids_load.cpu(), [0]):
+            elif body.env_ids_load.tolist() != [0]:
                 raise ValueError(
                     f"For Bullet, 'env_ids_load' must be either None, [] or [0]: '{body.name}'"
                 )
@@ -413,7 +413,6 @@ class Bullet(Simulator):
                 raise ValueError(
                     f"For Bullet, '{attr}' cannot be changed after body is loaded: '{body.name}'"
                 )
-
         if any(not body.attr_array_default_flag[x] for x in self._ATTR_DOF_DYNAMICS):
             self._set_dof_dynamics(body)
         for attr in self._ATTR_DOF_DYNAMICS:
@@ -853,7 +852,7 @@ class Bullet(Simulator):
                 continue
 
             if body.env_ids_reset_base_state is not None:
-                if not np.array_equal(body.env_ids_reset_base_state.cpu(), [0]):
+                if body.env_ids_reset_base_state.tolist() != [0]:
                     raise ValueError(
                         "For Bullet, 'env_ids_reset_base_state' must be either None or [0]: "
                         f"'{body.name}'"
@@ -908,7 +907,7 @@ class Bullet(Simulator):
                 continue
 
             if body.env_ids_reset_dof_state is not None:
-                if not np.array_equal(body.env_ids_reset_dof_state.cpu(), [0]):
+                if body.env_ids_reset_dof_state.tolist() != [0]:
                     raise ValueError(
                         "For Bullet, 'env_ids_reset_dof_state' must be either None or [0]: "
                         f"'{body.name}'"
@@ -927,7 +926,6 @@ class Bullet(Simulator):
                     raise ValueError(
                         f"For Bullet, '{attr}' cannot be changed after each reset: '{body.name}'"
                     )
-
             if any(body.attr_array_dirty_flag[x] for x in self._ATTR_DOF_DYNAMICS):
                 self._set_dof_dynamics(body, dirty_only=True)
                 for attr in self._ATTR_DOF_DYNAMICS:
