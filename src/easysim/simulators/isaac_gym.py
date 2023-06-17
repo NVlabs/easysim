@@ -184,8 +184,8 @@ class IsaacGym(Simulator):
 
         if self._cfg.USE_GPU_PIPELINE and not self._allows_reset:
             raise RuntimeError(
-                "Consecutive 'reset()' without 'step()' may lead to unexpected simulation "
-                "artifacts and should be avoided"
+                "For Isaac Gym, consecutive 'reset()' without 'step()' may lead to unexpected "
+                "simulation artifacts and should be avoided"
             )
 
         if env_ids is None:
