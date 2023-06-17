@@ -895,6 +895,13 @@ class Bullet(Simulator):
                 if getattr(body, attr) is not None:
                     raise ValueError(f"'{attr}' is not supported in Bullet: '{body.name}'")
 
+            for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
+                if getattr(body, attr) is not None:
+                    raise ValueError(
+                        f"If '{attr}' is set, 'reset()' should be called before the next 'step()' "
+                        "in order to take effect"
+                    )
+
             for attr in ("scale",):
                 if body.attr_array_dirty_flag[attr]:
                     raise ValueError(

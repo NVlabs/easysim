@@ -1430,6 +1430,13 @@ class IsaacGym(Simulator):
         self._check_and_update_body_props()
 
         for body in self._scene.bodies:
+            for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
+                if getattr(body, attr) is not None:
+                    raise ValueError(
+                        f"If '{attr}' is set, 'reset()' should be called before the next 'step()' "
+                        "in order to take effect"
+                    )
+
             if self._asset_num_dofs[body.name] == 0:
                 for attr in (
                     "dof_target_position",
