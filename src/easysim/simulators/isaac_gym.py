@@ -1236,21 +1236,19 @@ class IsaacGym(Simulator):
             initial_base_position = self._initial_actor_root_state[
                 self._actor_root_indices[body.name], :7
             ]
+        elif body.env_ids_load is None or body.initial_base_position.ndim == 1:
+            initial_base_position = body.initial_base_position
         else:
-            if body.env_ids_load is None or body.initial_base_position.ndim == 1:
-                initial_base_position = body.initial_base_position
-            else:
-                initial_base_position = body.initial_base_position[body.env_ids_load]
+            initial_base_position = body.initial_base_position[body.env_ids_load]
         self._actor_root_state[self._actor_root_indices[body.name], :7] = initial_base_position
         if body.initial_base_velocity is None:
             initial_base_velocity = self._initial_actor_root_state[
                 self._actor_root_indices[body.name], 7:
             ]
+        elif body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
+            initial_base_velocity = body.initial_base_velocity
         else:
-            if body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
-                initial_base_velocity = body.initial_base_velocity
-            else:
-                initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
+            initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
         self._actor_root_state[self._actor_root_indices[body.name], 7:] = initial_base_velocity
 
     def _reset_dof_state_buffer(self, body):
@@ -1264,11 +1262,10 @@ class IsaacGym(Simulator):
                 ),
                 (2, 2),
             )[self._dof_indices[body.name]]
+        elif body.env_ids_load is None or body.initial_dof_position.ndim == 1:
+            initial_dof_position = body.initial_dof_position
         else:
-            if body.env_ids_load is None or body.initial_dof_position.ndim == 1:
-                initial_dof_position = body.initial_dof_position
-            else:
-                initial_dof_position = body.initial_dof_position[body.env_ids_load]
+            initial_dof_position = body.initial_dof_position[body.env_ids_load]
         torch.as_strided(
             self._dof_state[:, 0],
             (
@@ -1286,11 +1283,10 @@ class IsaacGym(Simulator):
                 ),
                 (2, 2),
             )[self._dof_indices[body.name]]
+        elif body.env_ids_load is None or body.initial_dof_velocity.ndim == 1:
+            initial_dof_velocity = body.initial_dof_velocity
         else:
-            if body.env_ids_load is None or body.initial_dof_velocity.ndim == 1:
-                initial_dof_velocity = body.initial_dof_velocity
-            else:
-                initial_dof_velocity = body.initial_dof_velocity[body.env_ids_load]
+            initial_dof_velocity = body.initial_dof_velocity[body.env_ids_load]
         torch.as_strided(
             self._dof_state[:, 1],
             (
