@@ -940,7 +940,7 @@ class IsaacGym(Simulator):
         """ """
         for body in self._scene.bodies:
             if body.attr_array_dirty_flag["link_color"]:
-                env_ids_masked = np.nonzero(body.attr_array_dirty_mask["link_color"])[0]
+                env_ids_masked = body.attr_array_dirty_mask["link_color"].nonzero()[0]
                 for idx in env_ids_masked:
                     self._set_link_color(body, idx)
                 body.attr_array_dirty_flag["link_color"] = False
@@ -991,7 +991,7 @@ class IsaacGym(Simulator):
         """ """
         for body in self._scene.bodies:
             if body.attr_array_dirty_flag["link_segmentation_id"]:
-                env_ids_masked = np.nonzero(body.attr_array_dirty_mask["link_segmentation_id"])[0]
+                env_ids_masked = body.attr_array_dirty_mask["link_segmentation_id"].nonzero()[0]
                 for idx in env_ids_masked:
                     self._set_link_segmentation_id(body, idx)
                 body.attr_array_dirty_flag["link_segmentation_id"] = False
@@ -1029,7 +1029,7 @@ class IsaacGym(Simulator):
             for attr in self._ATTR_VIEW_MATRIX:
                 if camera.attr_array_dirty_flag[attr]:
                     mask |= camera.attr_array_dirty_mask[attr]
-            env_ids_masked = np.nonzero(mask)[0]
+            env_ids_masked = mask.nonzero()[0]
             for idx in env_ids_masked:
                 self._set_camera_pose(camera, idx)
             for attr in self._ATTR_VIEW_MATRIX:
@@ -1314,13 +1314,13 @@ class IsaacGym(Simulator):
             for attr in ("scale", "link_color"):
                 if body.attr_array_dirty_flag[attr]:
                     if env_ids is not None and not np.all(
-                        np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
+                        np.isin(body.attr_array_dirty_mask[attr].nonzero()[0], env_ids.cpu())
                     ):
                         raise ValueError(
                             f"For Isaac Gym, to change '{attr}' for some env also requires the env "
                             f"indices to be in `env_ids`: '{body.name}'"
                         )
-                    env_ids_masked = np.nonzero(body.attr_array_dirty_mask[attr])[0]
+                    env_ids_masked = body.attr_array_dirty_mask[attr].nonzero()[0]
                     for idx in env_ids_masked:
                         if attr == "scale":
                             self._set_scale(body, idx)
@@ -1334,14 +1334,14 @@ class IsaacGym(Simulator):
                 for attr in self._ATTR_RIGID_SHAPE_PROPS:
                     if body.attr_array_dirty_flag[attr]:
                         if env_ids is not None and not np.all(
-                            np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
+                            np.isin(body.attr_array_dirty_mask[attr].nonzero()[0], env_ids.cpu())
                         ):
                             raise ValueError(
                                 f"For Isaac Gym, to change '{attr}' for some env also requires the "
                                 f"env indices to be in `env_ids`: '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
-                env_ids_masked = np.nonzero(mask)[0]
+                env_ids_masked = mask.nonzero()[0]
                 for idx in env_ids_masked:
                     self._set_rigid_shape_props(body, idx)
                 for attr in self._ATTR_RIGID_SHAPE_PROPS:
@@ -1379,14 +1379,14 @@ class IsaacGym(Simulator):
                 for attr in self._ATTR_DOF_PROPS:
                     if body.attr_array_dirty_flag[attr]:
                         if env_ids is not None and not np.all(
-                            np.isin(np.nonzero(body.attr_array_dirty_mask[attr])[0], env_ids.cpu())
+                            np.isin(body.attr_array_dirty_mask[attr].nonzero()[0], env_ids.cpu())
                         ):
                             raise ValueError(
                                 f"For Isaac Gym, to change '{attr}' for certain env also requires "
                                 f"the env index to be in `env_ids`: '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
-                env_ids_masked = np.nonzero(mask)[0]
+                env_ids_masked = mask.nonzero()[0]
                 for idx in env_ids_masked:
                     self._set_dof_props(body, idx)
                 for attr in self._ATTR_DOF_PROPS:
