@@ -92,7 +92,6 @@ class IsaacGym(Simulator):
         self._gym = gymapi.acquire_gym()
 
         self._created = False
-        self._allows_reset = True
         self._counter_render = 0
         self._render_time_step = max(
             1.0 / self._cfg.ISAAC_GYM.VIEWER.RENDER_FRAME_RATE, self._cfg.TIME_STEP
@@ -182,12 +181,6 @@ class IsaacGym(Simulator):
 
             self._created = True
 
-        if self._cfg.USE_GPU_PIPELINE and not self._allows_reset:
-            raise RuntimeError(
-                "For Isaac Gym, consecutive 'reset()' without 'step()' may lead to unexpected "
-                "simulation artifacts and should be avoided"
-            )
-
         if env_ids is None:
             env_ids = torch.arange(self._num_envs, device=self.device)
 
@@ -197,9 +190,6 @@ class IsaacGym(Simulator):
         self._clear_state()
         self._clear_image()
         self._contact = None
-
-        if self._cfg.USE_GPU_PIPELINE:
-            self._allows_reset = False
 
     def _create_sim(self, compute_device, graphics_device, physics_engine, sim_params):
         """ """
@@ -1656,9 +1646,6 @@ class IsaacGym(Simulator):
         self._clear_state()
         self._clear_image()
         self._contact = None
-
-        if self._cfg.USE_GPU_PIPELINE:
-            self._allows_reset = True
 
         if self._viewer:
             if self._gym.query_viewer_has_closed(self._viewer):
