@@ -1165,14 +1165,24 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
+        # In GPU pipeline, set_actor_root_state_tensor_indexed() somehow will copy the current
+        # _actor_root_state for computing _rigid_body_state before stepping simulation. Thus
+        # _actor_root_state needs to be refreshed before set_actor_root_state_tensor_indexed().
+        if self._cfg.USE_GPU_PIPELINE:
+            self._gym.refresh_actor_root_state_tensor(self._sim)
+
         actor_indices_base = []
         actor_indices_dof = []
 
         for b, body in enumerate(self._scene.bodies):
-            self._reset_base_state_buffer(body)
-
             if body.env_ids_reset_base_state is not None:
                 self._check_body_env_ids_reset(body, "env_ids_reset_base_state", env_ids)
+
+            # Need to only update elements required for reset in _actor_root_state rather than
+            # updating the full tensor due to the aforementioned behavior in GPU pipeline.
+            self._reset_base_state_buffer(body, env_ids)
+
+            if body.env_ids_reset_base_state is not None:
                 actor_indices_base.append(self._actor_indices[body.env_ids_reset_base_state, b])
                 body.env_ids_reset_base_state = None
 
@@ -1230,26 +1240,54 @@ class IsaacGym(Simulator):
 
         self._check_and_update_body_props(env_ids=env_ids)
 
-    def _reset_base_state_buffer(self, body):
+    def _reset_base_state_buffer(self, body, env_ids):
         """ """
+        if body.env_ids_reset_base_state is not None:
+            env_ids = torch.cat((env_ids, body.env_ids_reset_base_state))
+        if body.env_ids_load is not None:
+            env_ids_load_masked = torch.isin(body.env_ids_load, env_ids).nonzero().squeeze(-1)
+
         if body.initial_base_position is None:
             initial_base_position = self._initial_actor_root_state[
-                self._actor_root_indices[body.name], :7
+                self._actor_root_indices[body.name][env_ids], :7
             ]
-        elif body.env_ids_load is None or body.initial_base_position.ndim == 1:
+        elif body.initial_base_position.ndim == 1:
             initial_base_position = body.initial_base_position
+        elif body.env_ids_load is None:
+            initial_base_position = body.initial_base_position[env_ids]
         else:
-            initial_base_position = body.initial_base_position[body.env_ids_load]
-        self._actor_root_state[self._actor_root_indices[body.name], :7] = initial_base_position
+            initial_base_position = body.initial_base_position[
+                body.env_ids_load[env_ids_load_masked]
+            ]
+        if body.env_ids_load is None:
+            self._actor_root_state[
+                self._actor_root_indices[body.name][env_ids], :7
+            ] = initial_base_position
+        else:
+            self._actor_root_state[
+                self._actor_root_indices[body.name][env_ids_load_masked], :7
+            ] = initial_base_position
+
         if body.initial_base_velocity is None:
             initial_base_velocity = self._initial_actor_root_state[
-                self._actor_root_indices[body.name], 7:
+                self._actor_root_indices[body.name][env_ids], 7:
             ]
-        elif body.env_ids_load is None or body.initial_base_velocity.ndim == 1:
+        elif body.initial_base_velocity.ndim == 1:
             initial_base_velocity = body.initial_base_velocity
+        elif body.env_ids_load is None:
+            initial_base_velocity = body.initial_base_velocity[env_ids]
         else:
-            initial_base_velocity = body.initial_base_velocity[body.env_ids_load]
-        self._actor_root_state[self._actor_root_indices[body.name], 7:] = initial_base_velocity
+            initial_base_velocity = body.initial_base_velocity[
+                body.env_ids_load[env_ids_load_masked]
+            ]
+        if body.env_ids_load is None:
+            self._actor_root_state[
+                self._actor_root_indices[body.name][env_ids], 7:
+            ] = initial_base_velocity
+        else:
+            self._actor_root_state[
+                self._actor_root_indices[body.name][env_ids_load_masked], 7:
+            ] = initial_base_velocity
 
     def _reset_dof_state_buffer(self, body):
         """ """
