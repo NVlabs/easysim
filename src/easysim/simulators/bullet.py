@@ -804,8 +804,8 @@ class Bullet(Simulator):
             for attr in ("env_ids_reset_base_state", "env_ids_reset_dof_state"):
                 if getattr(body, attr) is not None:
                     raise ValueError(
-                        f"For Bullet, '{attr}' should be None if 'env_ids_load' is set to "
-                        f"[]: '{body.name}'"
+                        f"For Bullet, '{attr}' must be None if 'env_ids_load' is set to []: "
+                        f"'{body.name}'"
                     )
             return
 

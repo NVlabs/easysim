@@ -1155,9 +1155,9 @@ class IsaacGym(Simulator):
                 "For Isaac Gym, the list of bodies cannot be altered after the first reset"
             )
 
-        # In GPU pipeline, set_actor_root_state_tensor_indexed() somehow will copy the current
-        # _actor_root_state for computing _rigid_body_state before stepping simulation. Thus
-        # _actor_root_state needs to be refreshed before set_actor_root_state_tensor_indexed().
+        # In GPU pipeline, `set_actor_root_state_tensor_indexed()` somehow will copy the current
+        # `_actor_root_state` for computing `_rigid_body_state` before stepping simulation. Thus
+        # `_actor_root_state` needs to be refreshed before `set_actor_root_state_tensor_indexed()`.
         if self._cfg.USE_GPU_PIPELINE:
             self._gym.refresh_actor_root_state_tensor(self._sim)
 
@@ -1346,7 +1346,7 @@ class IsaacGym(Simulator):
                     ):
                         raise ValueError(
                             f"For Isaac Gym, to change '{attr}' for some env also requires the env "
-                            f"indices to be in `env_ids`: '{body.name}'"
+                            f"indices to be in 'env_ids': '{body.name}'"
                         )
                     env_ids_masked = body.attr_array_dirty_mask[attr].nonzero()[0]
                     for idx in env_ids_masked:
@@ -1366,7 +1366,7 @@ class IsaacGym(Simulator):
                         ):
                             raise ValueError(
                                 f"For Isaac Gym, to change '{attr}' for some env also requires the "
-                                f"env indices to be in `env_ids`: '{body.name}'"
+                                f"env indices to be in 'env_ids': '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
                 env_ids_masked = mask.nonzero()[0]
@@ -1411,7 +1411,7 @@ class IsaacGym(Simulator):
                         ):
                             raise ValueError(
                                 f"For Isaac Gym, to change '{attr}' for certain env also requires "
-                                f"the env index to be in `env_ids`: '{body.name}'"
+                                f"the env index to be in 'env_ids': '{body.name}'"
                             )
                         mask |= body.attr_array_dirty_mask[attr]
                 env_ids_masked = mask.nonzero()[0]
