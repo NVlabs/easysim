@@ -1088,7 +1088,6 @@ class Bullet(AttrsArrayTensor):
 
     def _set_attr_device(self, device):
         """ """
-        pass
 
 
 class IsaacGym(AttrsArrayTensor):
@@ -1242,7 +1241,6 @@ class IsaacGym(AttrsArrayTensor):
 
     def _set_attr_device(self, device):
         """ """
-        pass
 
 
 class IsaacSim(AttrsArrayTensor):
@@ -1258,4 +1256,3 @@ class IsaacSim(AttrsArrayTensor):
 
     def _set_attr_device(self, device):
         """ """
-        pass

@@ -346,7 +346,6 @@ class Camera(AttrsArrayTensor):
 
     def _set_attr_device(self, device):
         """ """
-        pass
 
     def set_callback_render_color(self, callback):
         """ """

@@ -73,7 +73,6 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
     def callback_post_load(self, env_ids):
         """ """
-        pass
 
     @abc.abstractmethod
     def post_reset(self, env_ids, **kwargs):
