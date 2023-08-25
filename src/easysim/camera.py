@@ -81,7 +81,7 @@ class Camera(AttrsArrayTensor):
     @width.setter
     def width(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "width"
         ], "'width' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -104,7 +104,7 @@ class Camera(AttrsArrayTensor):
     @height.setter
     def height(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "height"
         ], "'height' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -127,7 +127,7 @@ class Camera(AttrsArrayTensor):
     @vertical_fov.setter
     def vertical_fov(self, value):
         """ """
-        assert not self._attr_array_locked["vertical_fov"], (
+        assert not self.attr_array_locked["vertical_fov"], (
             "'vertical_fov' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -152,7 +152,7 @@ class Camera(AttrsArrayTensor):
     @near.setter
     def near(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "near"
         ], "'near' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -172,7 +172,7 @@ class Camera(AttrsArrayTensor):
     @far.setter
     def far(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "far"
         ], "'far' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -192,7 +192,7 @@ class Camera(AttrsArrayTensor):
     @position.setter
     def position(self, value):
         """ """
-        assert not self._attr_array_locked["position"], (
+        assert not self.attr_array_locked["position"], (
             "'position' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -219,7 +219,7 @@ class Camera(AttrsArrayTensor):
     @target.setter
     def target(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "target"
         ], "'target' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -248,7 +248,7 @@ class Camera(AttrsArrayTensor):
     @up_vector.setter
     def up_vector(self, value):
         """ """
-        assert not self._attr_array_locked["up_vector"], (
+        assert not self.attr_array_locked["up_vector"], (
             "'up_vector' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -279,7 +279,7 @@ class Camera(AttrsArrayTensor):
     @orientation.setter
     def orientation(self, value):
         """ """
-        assert not self._attr_array_locked["orientation"], (
+        assert not self.attr_array_locked["orientation"], (
             "'orientation' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )

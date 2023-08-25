@@ -308,7 +308,7 @@ class Body(AttrsArrayTensor):
     @scale.setter
     def scale(self, value):
         """ """
-        assert not self._attr_array_locked[
+        assert not self.attr_array_locked[
             "scale"
         ], "'scale' cannot be directly changed after simulation starts. Use 'update_attr_array()'."
         if value is not None:
@@ -331,7 +331,7 @@ class Body(AttrsArrayTensor):
     @link_collision_filter.setter
     def link_collision_filter(self, value):
         """ """
-        assert not self._attr_array_locked["link_collision_filter"], (
+        assert not self.attr_array_locked["link_collision_filter"], (
             "'link_collision_filter' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -356,7 +356,7 @@ class Body(AttrsArrayTensor):
     @link_lateral_friction.setter
     def link_lateral_friction(self, value):
         """ """
-        assert not self._attr_array_locked["link_lateral_friction"], (
+        assert not self.attr_array_locked["link_lateral_friction"], (
             "'link_lateral_friction' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -381,7 +381,7 @@ class Body(AttrsArrayTensor):
     @link_spinning_friction.setter
     def link_spinning_friction(self, value):
         """ """
-        assert not self._attr_array_locked["link_spinning_friction"], (
+        assert not self.attr_array_locked["link_spinning_friction"], (
             "'link_spinning_friction' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -406,7 +406,7 @@ class Body(AttrsArrayTensor):
     @link_rolling_friction.setter
     def link_rolling_friction(self, value):
         """ """
-        assert not self._attr_array_locked["link_rolling_friction"], (
+        assert not self.attr_array_locked["link_rolling_friction"], (
             "'link_rolling_friction' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -431,7 +431,7 @@ class Body(AttrsArrayTensor):
     @link_restitution.setter
     def link_restitution(self, value):
         """ """
-        assert not self._attr_array_locked["link_restitution"], (
+        assert not self.attr_array_locked["link_restitution"], (
             "'link_restitution' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -456,7 +456,7 @@ class Body(AttrsArrayTensor):
     @link_linear_damping.setter
     def link_linear_damping(self, value):
         """ """
-        assert not self._attr_array_locked["link_linear_damping"], (
+        assert not self.attr_array_locked["link_linear_damping"], (
             "'link_linear_damping' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -481,7 +481,7 @@ class Body(AttrsArrayTensor):
     @link_angular_damping.setter
     def link_angular_damping(self, value):
         """ """
-        assert not self._attr_array_locked["link_angular_damping"], (
+        assert not self.attr_array_locked["link_angular_damping"], (
             "'link_angular_damping' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -506,7 +506,7 @@ class Body(AttrsArrayTensor):
     @link_color.setter
     def link_color(self, value):
         """ """
-        assert not self._attr_array_locked["link_color"], (
+        assert not self.attr_array_locked["link_color"], (
             "'link_color' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -531,7 +531,7 @@ class Body(AttrsArrayTensor):
     @link_segmentation_id.setter
     def link_segmentation_id(self, value):
         """ """
-        assert not self._attr_array_locked["link_segmentation_id"], (
+        assert not self.attr_array_locked["link_segmentation_id"], (
             "'link_segmentation_id' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -556,7 +556,7 @@ class Body(AttrsArrayTensor):
     @dof_has_limits.setter
     def dof_has_limits(self, value):
         """ """
-        assert not self._attr_array_locked["dof_has_limits"], (
+        assert not self.attr_array_locked["dof_has_limits"], (
             "'dof_has_limits' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -581,7 +581,7 @@ class Body(AttrsArrayTensor):
     @dof_lower_limit.setter
     def dof_lower_limit(self, value):
         """ """
-        assert not self._attr_array_locked["dof_lower_limit"], (
+        assert not self.attr_array_locked["dof_lower_limit"], (
             "'dof_lower_limit' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -606,7 +606,7 @@ class Body(AttrsArrayTensor):
     @dof_upper_limit.setter
     def dof_upper_limit(self, value):
         """ """
-        assert not self._attr_array_locked["dof_upper_limit"], (
+        assert not self.attr_array_locked["dof_upper_limit"], (
             "'dof_upper_limit' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -631,7 +631,7 @@ class Body(AttrsArrayTensor):
     @dof_control_mode.setter
     def dof_control_mode(self, value):
         """ """
-        assert not self._attr_array_locked["dof_control_mode"], (
+        assert not self.attr_array_locked["dof_control_mode"], (
             "'dof_control_mode' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -656,7 +656,7 @@ class Body(AttrsArrayTensor):
     @dof_max_force.setter
     def dof_max_force(self, value):
         """ """
-        assert not self._attr_array_locked["dof_max_force"], (
+        assert not self.attr_array_locked["dof_max_force"], (
             "'dof_max_force' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -681,7 +681,7 @@ class Body(AttrsArrayTensor):
     @dof_max_velocity.setter
     def dof_max_velocity(self, value):
         """ """
-        assert not self._attr_array_locked["dof_max_velocity"], (
+        assert not self.attr_array_locked["dof_max_velocity"], (
             "'dof_max_velocity' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -706,7 +706,7 @@ class Body(AttrsArrayTensor):
     @dof_position_gain.setter
     def dof_position_gain(self, value):
         """ """
-        assert not self._attr_array_locked["dof_position_gain"], (
+        assert not self.attr_array_locked["dof_position_gain"], (
             "'dof_position_gain' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -731,7 +731,7 @@ class Body(AttrsArrayTensor):
     @dof_velocity_gain.setter
     def dof_velocity_gain(self, value):
         """ """
-        assert not self._attr_array_locked["dof_velocity_gain"], (
+        assert not self.attr_array_locked["dof_velocity_gain"], (
             "'dof_velocity_gain' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -756,7 +756,7 @@ class Body(AttrsArrayTensor):
     @dof_friction.setter
     def dof_friction(self, value):
         """ """
-        assert not self._attr_array_locked["dof_friction"], (
+        assert not self.attr_array_locked["dof_friction"], (
             "'dof_friction' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )
@@ -781,7 +781,7 @@ class Body(AttrsArrayTensor):
     @dof_armature.setter
     def dof_armature(self, value):
         """ """
-        assert not self._attr_array_locked["dof_armature"], (
+        assert not self.attr_array_locked["dof_armature"], (
             "'dof_armature' cannot be directly changed after simulation starts. Use "
             "'update_attr_array()'."
         )

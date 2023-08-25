@@ -41,12 +41,12 @@ class SimulatorEnv(gym.Env, abc.ABC):
     @property
     def device(self):
         """ """
-        return self._simulator.device
+        return self.simulator.device
 
     @property
     def graphics_device(self):
         """ """
-        return self._simulator.graphics_device
+        return self.simulator.graphics_device
 
     @abc.abstractmethod
     def init(self, **kwargs):
@@ -61,7 +61,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
 
         callback_post_load = lambda: self.callback_post_load(env_ids)
 
-        self._simulator.reset(env_ids, callback_post_load)
+        self.simulator.reset(env_ids, callback_post_load)
 
         observation = self.post_reset(env_ids, **kwargs)
 
@@ -82,7 +82,7 @@ class SimulatorEnv(gym.Env, abc.ABC):
         """ """
         self.pre_step(action)
 
-        self._simulator.step()
+        self.simulator.step()
 
         observation, reward, done, info = self.post_step(action)
 
@@ -99,11 +99,11 @@ class SimulatorEnv(gym.Env, abc.ABC):
     @property
     def contact(self):
         """ """
-        return self._simulator.contact
+        return self.simulator.contact
 
     def close(self):
         """ """
-        self._simulator.close()
+        self.simulator.close()
 
 
 class SimulatorWrapper(gym.Wrapper):

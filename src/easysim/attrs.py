@@ -44,9 +44,9 @@ class AttrsArrayTensor(Attrs):
         self._attr_array_dirty_mask = {}
         self._attr_array_default_flag = {}
         for attr in self._ATTR_ARRAY_NDIM:
-            self._attr_array_locked[attr] = False
-            self._attr_array_dirty_flag[attr] = False
-            self._attr_array_default_flag[attr] = False
+            self.attr_array_locked[attr] = False
+            self.attr_array_dirty_flag[attr] = False
+            self.attr_array_default_flag[attr] = False
 
     @property
     def attr_array_locked(self):
@@ -90,9 +90,9 @@ class AttrsArrayTensor(Attrs):
 
     def lock_attr_array(self):
         """ """
-        for k in self._attr_array_locked:
-            if not self._attr_array_locked[k]:
-                self._attr_array_locked[k] = True
+        for k in self.attr_array_locked:
+            if not self.attr_array_locked[k]:
+                self.attr_array_locked[k] = True
             if getattr(self, k) is not None:
                 getattr(self, k).flags.writeable = False
 
@@ -111,16 +111,16 @@ class AttrsArrayTensor(Attrs):
         with self._make_attr_array_writeable(attr):
             getattr(self, attr)[env_ids_np] = value
 
-        if not self._attr_array_dirty_flag[attr]:
-            self._attr_array_dirty_flag[attr] = True
+        if not self.attr_array_dirty_flag[attr]:
+            self.attr_array_dirty_flag[attr] = True
         try:
-            self._attr_array_dirty_mask[attr][env_ids_np] = True
+            self.attr_array_dirty_mask[attr][env_ids_np] = True
         except KeyError:
-            self._attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
-            self._attr_array_dirty_mask[attr][env_ids_np] = True
+            self.attr_array_dirty_mask[attr] = np.zeros(len(getattr(self, attr)), dtype=bool)
+            self.attr_array_dirty_mask[attr][env_ids_np] = True
 
-        if self._attr_array_default_flag[attr]:
-            self._attr_array_default_flag[attr] = False
+        if self.attr_array_default_flag[attr]:
+            self.attr_array_default_flag[attr] = False
 
     @contextmanager
     def _make_attr_array_writeable(self, attr):
