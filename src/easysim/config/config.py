@@ -22,7 +22,7 @@ _C = CN()
 _C.SIM = CN()
 
 # Simulator choice
-#     Valid options: ("bullet", "isaac_gym")
+#     Valid options: ("bullet", "isaac_gym", "isaac_sim")
 _C.SIM.SIMULATOR = "bullet"
 
 _C.SIM.RENDER = False
