@@ -425,10 +425,13 @@ class IsaacGym(Simulator):
                     "For Isaac Gym, cannot set 'vertical_fov' without setting 'width' and "
                     f"'height': '{camera.name}'"
                 )
-            camera_props.horizontal_fov = (
-                camera.get_attr_array("vertical_fov", idx)
-                * camera.get_attr_array("width", idx)
-                / camera.get_attr_array("height", idx)
+            camera_props.horizontal_fov = np.rad2deg(
+                np.arctan(
+                    np.tan(np.deg2rad(camera.get_attr_array("vertical_fov", idx) / 2.0))
+                    * camera.get_attr_array("width", idx)
+                    / camera.get_attr_array("height", idx)
+                )
+                * 2.0
             )
         if camera.near is not None:
             camera_props.near_plane = camera.get_attr_array("near", idx)
