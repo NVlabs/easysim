@@ -1395,17 +1395,7 @@ class IsaacGym(Simulator):
                         )
                 continue
 
-            for attr in ("dof_control_mode",):
-                if body.attr_array_dirty_flag[attr]:
-                    raise ValueError(
-                        f"For Isaac Gym, '{attr}' cannot be changed after the first reset: "
-                        f"'{body.name}'"
-                    )
-            if any(
-                body.attr_array_dirty_flag[x]
-                for x in self._ATTR_DOF_PROPS
-                if x not in ("dof_control_mode",)
-            ):
+            if any(body.attr_array_dirty_flag[x] for x in self._ATTR_DOF_PROPS):
                 mask = np.zeros(self._num_envs, dtype=bool)
                 for attr in self._ATTR_DOF_PROPS:
                     if body.attr_array_dirty_flag[attr]:
@@ -1476,159 +1466,45 @@ class IsaacGym(Simulator):
                         )
                 continue
 
-            if body.dof_target_position is not None and (
-                body.dof_control_mode is None
-                or body.dof_control_mode.ndim == 0
-                and body.dof_control_mode != DoFControlMode.POSITION_CONTROL
-                or body.dof_control_mode.ndim == 1
-                and DoFControlMode.POSITION_CONTROL not in body.dof_control_mode
-            ):
-                raise ValueError(
-                    "For Isaac Gym, 'dof_target_position' can only be set in the POSITION_CONTROL "
-                    f"mode: '{body.name}'"
-                )
-            if body.dof_target_velocity is not None and (
-                body.dof_control_mode is None
-                or body.dof_control_mode.ndim == 0
-                and body.dof_control_mode != DoFControlMode.VELOCITY_CONTROL
-                or body.dof_control_mode.ndim == 1
-                and DoFControlMode.VELOCITY_CONTROL not in body.dof_control_mode
-            ):
-                raise ValueError(
-                    "For Isaac Gym, 'dof_target_velocity' can only be set in the VELOCITY_CONTROL "
-                    f"mode: '{body.name}'"
-                )
-            if body.dof_actuation_force is not None and (
-                body.dof_control_mode is None
-                or body.dof_control_mode.ndim == 0
-                and body.dof_control_mode != DoFControlMode.TORQUE_CONTROL
-                or body.dof_control_mode.ndim == 1
-                and DoFControlMode.TORQUE_CONTROL not in body.dof_control_mode
-            ):
-                raise ValueError(
-                    "For Isaac Gym, 'dof_actuation_force' can only be set in the TORQUE_CONTROL "
-                    f"mode: '{body.name}'"
-                )
-
-            # DriveMode is defaulted to DOF_MODE_NONE if dof_control_mode is None.
-            if body.dof_control_mode is None:
-                continue
-            if body.dof_control_mode.ndim == 0:
-                if body.dof_control_mode == DoFControlMode.POSITION_CONTROL:
-                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
-                        dof_target_position = body.dof_target_position
-                    else:
-                        dof_target_position = body.dof_target_position[body.env_ids_load]
-                    torch.as_strided(
-                        self._dof_position_target_buffer,
-                        (
-                            len(self._dof_position_target_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[self._dof_indices[body.name]] = dof_target_position
-                if body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL:
-                    if body.env_ids_load is None or body.dof_target_velocity.ndim == 1:
-                        dof_target_velocity = body.dof_target_velocity
-                    else:
-                        dof_target_velocity = body.dof_target_velocity[body.env_ids_load]
-                    torch.as_strided(
-                        self._dof_velocity_target_buffer,
-                        (
-                            len(self._dof_velocity_target_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[self._dof_indices[body.name]] = dof_target_velocity
-                if body.dof_control_mode == DoFControlMode.TORQUE_CONTROL:
-                    if body.env_ids_load is None or body.dof_actuation_force.ndim == 1:
-                        dof_actuation_force = body.dof_actuation_force
-                    else:
-                        dof_actuation_force = body.dof_actuation_force[body.env_ids_load]
-                    torch.as_strided(
-                        self._dof_actuation_force_buffer,
-                        (
-                            len(self._dof_actuation_force_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[self._dof_indices[body.name]] = dof_actuation_force
-            if body.dof_control_mode.ndim == 1:
-                if DoFControlMode.POSITION_CONTROL in body.dof_control_mode:
-                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
-                        dof_target_position = body.dof_target_position[
-                            ..., body.dof_control_mode == DoFControlMode.POSITION_CONTROL
-                        ]
-                    else:
-                        dof_target_position = body.dof_target_position[
-                            body.env_ids_load[:, None],
-                            body.dof_control_mode == DoFControlMode.POSITION_CONTROL,
-                        ]
-                    torch.as_strided(
-                        self._dof_position_target_buffer,
-                        (
-                            len(self._dof_position_target_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[
-                        self._dof_indices[body.name][:, None],
-                        body.dof_control_mode == DoFControlMode.POSITION_CONTROL,
-                    ] = dof_target_position
-                if DoFControlMode.VELOCITY_CONTROL in body.dof_control_mode:
-                    if body.env_ids_load is None or body.dof_target_position.ndim == 1:
-                        dof_target_velocity = body.dof_target_velocity[
-                            ..., body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL
-                        ]
-                    else:
-                        dof_target_velocity = body.dof_target_velocity[
-                            body.env_ids_load[:, None],
-                            body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
-                        ]
-                    torch.as_strided(
-                        self._dof_velocity_target_buffer,
-                        (
-                            len(self._dof_velocity_target_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[
-                        self._dof_indices[body.name][:, None],
-                        body.dof_control_mode == DoFControlMode.VELOCITY_CONTROL,
-                    ] = dof_target_velocity
-                if DoFControlMode.TORQUE_CONTROL in body.dof_control_mode:
-                    if body.env_ids_load is None or body.dof_actuation_force.ndim == 1:
-                        dof_actuation_force = body.dof_actuation_force[
-                            ..., body.dof_control_mode == DoFControlMode.TORQUE_CONTROL
-                        ]
-                    else:
-                        dof_actuation_force = body.dof_actuation_force[
-                            body.env_ids_load[:, None],
-                            body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
-                        ]
-                    torch.as_strided(
-                        self._dof_actuation_force_buffer,
-                        (
-                            len(self._dof_actuation_force_buffer)
-                            - self._asset_num_dofs[body.name]
-                            + 1,
-                            self._asset_num_dofs[body.name],
-                        ),
-                        (1, 1),
-                    )[
-                        self._dof_indices[body.name][:, None],
-                        body.dof_control_mode == DoFControlMode.TORQUE_CONTROL,
-                    ] = dof_actuation_force
+            if body.dof_target_position is not None:
+                if body.env_ids_load is None or body.dof_target_position.ndim == 1:
+                    dof_target_position = body.dof_target_position
+                else:
+                    dof_target_position = body.dof_target_position[body.env_ids_load]
+                torch.as_strided(
+                    self._dof_position_target_buffer,
+                    (
+                        len(self._dof_position_target_buffer) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                    ),
+                    (1, 1),
+                )[self._dof_indices[body.name]] = dof_target_position
+            if body.dof_target_velocity is not None:
+                if body.env_ids_load is None or body.dof_target_velocity.ndim == 1:
+                    dof_target_velocity = body.dof_target_velocity
+                else:
+                    dof_target_velocity = body.dof_target_velocity[body.env_ids_load]
+                torch.as_strided(
+                    self._dof_velocity_target_buffer,
+                    (
+                        len(self._dof_velocity_target_buffer) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                    ),
+                    (1, 1),
+                )[self._dof_indices[body.name]] = dof_target_velocity
+            if body.dof_actuation_force is not None:
+                if body.env_ids_load is None or body.dof_actuation_force.ndim == 1:
+                    dof_actuation_force = body.dof_actuation_force
+                else:
+                    dof_actuation_force = body.dof_actuation_force[body.env_ids_load]
+                torch.as_strided(
+                    self._dof_actuation_force_buffer,
+                    (
+                        len(self._dof_actuation_force_buffer) - self._asset_num_dofs[body.name] + 1,
+                        self._asset_num_dofs[body.name],
+                    ),
+                    (1, 1),
+                )[self._dof_indices[body.name]] = dof_actuation_force
 
         if self._dof_state is not None:
             self._gym.set_dof_position_target_tensor(
