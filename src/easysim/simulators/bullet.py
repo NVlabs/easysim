@@ -830,9 +830,7 @@ class Bullet(Simulator):
                 "env_ids_reset_dof_state",
             ):
                 if getattr(body, attr) is not None:
-                    raise ValueError(
-                        f"'{attr}' must be None for body with 0 DoF: '{body.name}'"
-                    )
+                    raise ValueError(f"'{attr}' must be None for body with 0 DoF: '{body.name}'")
             return
 
         if body.env_ids_reset_dof_state is not None:
