@@ -144,6 +144,16 @@ class IsaacGym(Simulator):
 
         return sim_params
 
+    @property
+    def gymapi(self):
+        """ """
+        return gymapi
+
+    @property
+    def gymtorch(self):
+        """ """
+        return gymtorch
+
     def reset(self, env_ids, callback_post_load):
         """ """
         if not self._created:
